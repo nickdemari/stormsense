@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Flutter
+storm_sense/.dart_tool/
+storm_sense/.packages
+storm_sense/build/
+storm_sense/.flutter-plugins
+storm_sense/.flutter-plugins-dependencies
+storm_sense/**/*.g.dart
+storm_sense/**/*.freezed.dart
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.env
+
+# Claude Flow internals
+.claude-flow/
+.claude/
