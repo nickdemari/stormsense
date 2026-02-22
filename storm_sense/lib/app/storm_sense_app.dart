@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:storm_sense/app/router.dart';
+import 'package:storm_sense/core/theme/storm_theme.dart';
+import 'package:storm_sense/features/connection/bloc/connection_bloc.dart';
+import 'package:storm_sense/features/connection/bloc/connection_state.dart'
+    as conn;
+import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
+import 'package:storm_sense/features/history/bloc/history_bloc.dart';
+import 'package:storm_sense/features/history/bloc/history_event.dart';
+import 'package:storm_sense/features/settings/bloc/settings_bloc.dart';
+import 'package:storm_sense/features/settings/bloc/settings_event.dart';
+import 'package:storm_sense/notifications/storm_notification_service.dart';
+
+class StormSenseApp extends StatefulWidget {
+  const StormSenseApp({
+    super.key,
+    required this.notificationService,
+  });
+
+  final StormNotificationService notificationService;
+
+  @override
+  State<StormSenseApp> createState() => _StormSenseAppState();
+}
+
+class _StormSenseAppState extends State<StormSenseApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = createRouter();
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => ConnectionBloc(),
+        ),
+        BlocProvider(
+          create: (_) => SettingsBloc()..add(const SettingsLoaded()),
+        ),
+        BlocProvider(
+          create: (_) => DashboardBloc(
+            notificationService: widget.notificationService,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => HistoryBloc(),
+        ),
+      ],
+      child: BlocListener<ConnectionBloc, conn.ConnectionState>(
+        listener: (context, state) {
+          if (state is conn.ConnectionSuccess) {
+            context
+                .read<DashboardBloc>()
+                .add(DashboardStarted(state.baseUrl));
+            context
+                .read<HistoryBloc>()
+                .add(HistoryStarted(state.baseUrl));
+            _router.go('/dashboard');
+          }
+        },
+        child: MaterialApp.router(
+          title: 'StormSense',
+          theme: StormTheme.light,
+          darkTheme: StormTheme.dark,
+          routerConfig: _router,
+        ),
+      ),
+    );
+  }
+}

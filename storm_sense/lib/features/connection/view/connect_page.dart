@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:storm_sense/features/connection/bloc/connection_bloc.dart';
 import 'package:storm_sense/features/connection/bloc/connection_event.dart';
-import 'package:storm_sense/features/connection/bloc/connection_state.dart';
+import 'package:storm_sense/features/connection/bloc/connection_state.dart'
+    as conn;
 
 class ConnectPage extends StatefulWidget {
   const ConnectPage({super.key});
@@ -30,9 +31,9 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('StormSense')),
-      body: BlocConsumer<ConnectionBloc, ConnectionState>(
+      body: BlocConsumer<ConnectionBloc, conn.ConnectionState>(
         listener: (context, state) {
-          if (state is ConnectionInitial && state.lastIp != null) {
+          if (state is conn.ConnectionInitial && state.lastIp != null) {
             _controller.text = state.lastIp!;
           }
         },
@@ -60,7 +61,7 @@ class _ConnectPageState extends State<ConnectPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
-                if (state is ConnectionFailure)
+                if (state is conn.ConnectionFailure)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
@@ -71,7 +72,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: state is ConnectionLoading
+                    onPressed: state is conn.ConnectionLoading
                         ? null
                         : () {
                             final ip = _controller.text.trim();
@@ -81,7 +82,7 @@ class _ConnectPageState extends State<ConnectPage> {
                                   .add(ConnectionSubmitted(ip));
                             }
                           },
-                    child: state is ConnectionLoading
+                    child: state is conn.ConnectionLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
