@@ -1,0 +1,13 @@
+[Unit]
+Description=StormSense Weather Station
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 -m storm_sense.main
+WorkingDirectory=/home/pi/stormsense-pi
+Restart=always
+RestartSec=10
+User=pi
+
+[Install]
+WantedBy=multi-user.target
