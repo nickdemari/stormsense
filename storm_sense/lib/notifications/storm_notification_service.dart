@@ -1,11 +1,11 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Maps storm level integers to notification content.
-/// Level 0 (CLEAR) is intentionally absent — no notification needed.
+/// Only levels 3 (Rain) and 4 (Stormy) fire notifications — matches the
+/// `stormLevel >= 3` guard in DashboardBloc._fetchStatus.
 const _stormNotifications = {
-  1: (title: 'Storm Watch', body: 'Pressure dropping moderately. Weather may change.'),
-  2: (title: 'Storm Warning', body: 'Rapid pressure drop detected. Storm approaching.'),
-  3: (title: 'Severe Storm Alert', body: 'Severe pressure drop! Take precautions.'),
+  3: (title: 'Storm Warning', body: 'Rapid pressure drop detected. Rain likely.'),
+  4: (title: 'Severe Storm Alert', body: 'Severe pressure drop! Storm approaching — take precautions.'),
 };
 
 /// Notification channel ID used for all storm-related alerts on Android.
@@ -51,6 +51,32 @@ class StormNotificationService {
         ),
       );
     }
+  }
+
+  /// Returns whether notifications are currently enabled.
+  ///
+  /// On Android, checks the system notification setting.
+  /// On iOS/macOS, returns true (permission is requested at init).
+  Future<bool> areNotificationsEnabled() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    return true;
+  }
+
+  /// Requests notification permission (Android 13+ only).
+  ///
+  /// Returns true if granted, false otherwise. On iOS this is a no-op
+  /// because permission is requested during [init].
+  Future<bool> requestNotificationPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.requestNotificationsPermission() ?? false;
+    }
+    return true;
   }
 
   /// Shows a storm alert notification for the given [level].
