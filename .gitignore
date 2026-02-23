@@ -35,3 +35,16 @@ Thumbs.db
 
 # Firebase
 firebase-debug.log
+google-services.json
+GoogleService-Info.plist
+
+# Signing & Certificates
+*.keystore
+*.jks
+*.pem
+*.key
+*.p12
+
+# Photos (EXIF GPS data risk)
+*.HEIC
+*.heic
