@@ -19,18 +19,23 @@ from storm_sense.config import StormLevel
 
 # ── Display label lookup ────────────────────────────────────────
 _STORM_LABELS: dict[StormLevel, str] = {
-    StormLevel.CLEAR: "CLR ",
-    StormLevel.WATCH: "WTCH",
-    StormLevel.WARNING: "WARN",
-    StormLevel.SEVERE: "SEVR",
+    StormLevel.STORMY: "STRM",
+    StormLevel.RAIN: "RAIN",
+    StormLevel.CHANGE: "CHNG",
+    StormLevel.FAIR: "FAIR",
+    StormLevel.DRY: "DRY ",
 }
 
-# ── LED palette lookup (7 LEDs each) ───────────────────────────
-_LED_PALETTES: dict[StormLevel, list[tuple[int, int, int]]] = {
-    StormLevel.CLEAR: [(0, 80, 0)] * 7,
-    StormLevel.WATCH: [(0, 80, 0)] * 4 + [(80, 80, 0)] * 3,
-    StormLevel.WARNING: [(0, 80, 0)] * 2 + [(80, 80, 0)] * 2 + [(80, 30, 0)] * 3,
-    StormLevel.SEVERE: [(80, 0, 0)] * 7,
+# ── Single-LED barometer gauge ──────────────────────────────────
+# APA102 LEDs are numbered 6..0 from left to right on the board.
+# Labels left-to-right: Stormy(6) Rain(5) _ Change(3) _ Fair(1) Dry(0)
+# Only one LED lights up at a time, matching the condition.
+_LED_GAUGE: dict[StormLevel, tuple[int, tuple[int, int, int]]] = {
+    StormLevel.STORMY: (6, (80, 0, 0)),       # Red     (leftmost)
+    StormLevel.RAIN:   (5, (80, 30, 0)),       # Orange
+    StormLevel.CHANGE: (3, (80, 80, 0)),       # Yellow  (center)
+    StormLevel.FAIR:   (1, (0, 80, 0)),        # Green
+    StormLevel.DRY:    (0, (0, 40, 80)),       # Cyan    (rightmost)
 }
 
 # ── Buzzer constants ────────────────────────────────────────────
@@ -81,10 +86,10 @@ class HATInterface:
     # ── LED methods ─────────────────────────────────────────────
 
     def update_leds(self, level: StormLevel) -> None:
-        """Set all 7 APA102 LEDs to the palette matching *level*."""
-        palette = _LED_PALETTES[level]
-        for i, (r, g, b) in enumerate(palette):
-            rh.rainbow.set_pixel(i, r, g, b)
+        """Light a single LED on the barometer gauge matching *level*."""
+        rh.rainbow.clear()
+        idx, (r, g, b) = _LED_GAUGE[level]
+        rh.rainbow.set_pixel(idx, r, g, b)
         rh.rainbow.show()
 
     # ── Buzzer methods ──────────────────────────────────────────
@@ -92,14 +97,14 @@ class HATInterface:
     def buzz_alert(self, level: StormLevel) -> None:
         """Sound a buzzer alert appropriate for *level*.
 
-        CLEAR  -- no sound
-        WATCH  -- single C4 note, 0.3 s
-        WARNING / SEVERE -- three A4 notes, 0.2 s each, 0.1 s gap
+        DRY / FAIR -- no sound
+        CHANGE     -- single C4 note, 0.3 s
+        RAIN / STORMY -- three A4 notes, 0.2 s each, 0.1 s gap
         """
-        if level == StormLevel.CLEAR:
+        if level <= StormLevel.FAIR:
             return
 
-        if level == StormLevel.WATCH:
+        if level == StormLevel.CHANGE:
             rh.buzzer.midi_note(_MIDI_C4, 0.3)
             return
 

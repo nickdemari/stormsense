@@ -31,7 +31,7 @@ class StormSenseApp:
         self._hat = HATInterface()
         self._api = ApiServer(self._sensor)
         self._shutdown_event = threading.Event()
-        self._previous_storm_level = StormLevel.CLEAR
+        self._previous_storm_level = StormLevel.FAIR
 
         self._wire_buttons()
 
@@ -40,7 +40,7 @@ class StormSenseApp:
 
         def on_button_a():
             self._sensor.display_mode = DisplayMode.TEMPERATURE
-            self._hat.show_temperature(self._sensor.temperature)
+            self._hat.show_temperature(self._sensor.temperature_f)
             logger.info('Button A: Temperature mode')
 
         def on_button_b():
@@ -82,14 +82,15 @@ class StormSenseApp:
                 # Update display based on current mode
                 mode = self._sensor.display_mode
                 if mode == DisplayMode.TEMPERATURE:
-                    self._hat.show_temperature(self._sensor.temperature)
+                    self._hat.show_temperature(self._sensor.temperature_f)
                 elif mode == DisplayMode.PRESSURE:
                     self._hat.show_pressure(self._sensor.pressure)
                 elif mode == DisplayMode.STORM_LEVEL:
                     self._hat.show_storm_level(current_level)
 
                 logger.info(
-                    'Reading: %.1f°C, %.1f hPa, %s',
+                    'Reading: %.1f°F (%.1f°C), %.1f hPa, %s',
+                    self._sensor.temperature_f,
                     self._sensor.temperature,
                     self._sensor.pressure,
                     current_level.name,
@@ -119,7 +120,7 @@ class StormSenseApp:
         try:
             self._sensor.read()
             self._hat.update_leds(self._sensor.storm_level)
-            self._hat.show_temperature(self._sensor.temperature)
+            self._hat.show_temperature(self._sensor.temperature_f)
         except Exception:
             logger.exception('Failed initial sensor read')
             self._hat.show_text('ERR ')

@@ -1,5 +1,7 @@
 """SensorService — BMP280 reading, CPU heat calibration, and storm detection."""
 
+from __future__ import annotations
+
 import time
 from collections import deque
 
@@ -9,6 +11,8 @@ except ImportError:
     from storm_sense.mocks import mock_rainbowhat as rh
 
 from storm_sense.config import (
+    CPU_HEAT_FACTOR,
+    DRY_THRESHOLD,
     DisplayMode,
     HISTORY_MAX_SAMPLES,
     SESSION_LOG_MAX,
@@ -27,9 +31,10 @@ class SensorService:
 
     def __init__(self) -> None:
         self.temperature: float = 0.0
+        self.temperature_f: float = 32.0
         self.raw_temperature: float = 0.0
         self.pressure: float = 0.0
-        self.storm_level: StormLevel = StormLevel.CLEAR
+        self.storm_level: StormLevel = StormLevel.FAIR
         self.pressure_delta_3h: float | None = None
         self.display_mode: DisplayMode = DisplayMode.TEMPERATURE
 
@@ -46,9 +51,10 @@ class SensorService:
 
         self.raw_temperature = rh.weather.temperature()
         cpu_temp = self._read_cpu_temp()
-        self.temperature = self.raw_temperature - (cpu_temp - self.raw_temperature) / 2.0
+        self.temperature = self.raw_temperature - (cpu_temp - self.raw_temperature) / CPU_HEAT_FACTOR
 
         self.pressure = rh.weather.pressure()
+        self.temperature_f = self.temperature * 9.0 / 5.0 + 32.0
 
         self._pressure_history.append((now, self.pressure))
         self._update_storm_level()
@@ -56,6 +62,7 @@ class SensorService:
         self._session_log.append({
             'timestamp': now,
             'temperature': self.temperature,
+            'temperature_f': self.temperature_f,
             'raw_temperature': self.raw_temperature,
             'pressure': self.pressure,
             'storm_level': int(self.storm_level),
@@ -65,6 +72,7 @@ class SensorService:
         """Return current state matching the /api/status contract."""
         return {
             'temperature': self.temperature,
+            'temperature_f': self.temperature_f,
             'raw_temperature': self.raw_temperature,
             'pressure': self.pressure,
             'storm_level': int(self.storm_level),
@@ -83,7 +91,7 @@ class SensorService:
         """Clear all history and reset storm state."""
         self._pressure_history.clear()
         self._session_log.clear()
-        self.storm_level = StormLevel.CLEAR
+        self.storm_level = StormLevel.FAIR
         self.pressure_delta_3h = None
 
     # ── Private helpers ─────────────────────────────────────────
@@ -97,20 +105,26 @@ class SensorService:
             return CPU_TEMP_FALLBACK
 
     def _update_storm_level(self) -> None:
-        """Compute pressure delta and classify storm severity."""
+        """Compute pressure delta and classify weather condition.
+
+        Barometer scale (left to right on LEDs):
+        Stormy | Rain | Change | Fair | Dry
+        """
         if len(self._pressure_history) < 2:
             self.pressure_delta_3h = None
-            self.storm_level = StormLevel.CLEAR
+            self.storm_level = StormLevel.FAIR
             return
 
         oldest_pressure = self._pressure_history[0][1]
         self.pressure_delta_3h = self.pressure - oldest_pressure
 
         if self.pressure_delta_3h <= STORM_SEVERE_THRESHOLD:
-            self.storm_level = StormLevel.SEVERE
+            self.storm_level = StormLevel.STORMY
         elif self.pressure_delta_3h <= STORM_WARNING_THRESHOLD:
-            self.storm_level = StormLevel.WARNING
+            self.storm_level = StormLevel.RAIN
         elif self.pressure_delta_3h <= STORM_WATCH_THRESHOLD:
-            self.storm_level = StormLevel.WATCH
+            self.storm_level = StormLevel.CHANGE
+        elif self.pressure_delta_3h >= DRY_THRESHOLD:
+            self.storm_level = StormLevel.DRY
         else:
-            self.storm_level = StormLevel.CLEAR
+            self.storm_level = StormLevel.FAIR

@@ -72,131 +72,140 @@ class TestShowStormLevel(unittest.TestCase):
     """show_storm_level writes the correct 4-char label for every level."""
 
     @patch(MODULE)
-    def test_clear(self, mock_rh: MagicMock) -> None:
+    def test_stormy(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().show_storm_level(StormLevel.CLEAR)
-        mock_rh.display.print_str.assert_called_with("CLR ")
+        HATInterface().show_storm_level(StormLevel.STORMY)
+        mock_rh.display.print_str.assert_called_with("STRM")
 
     @patch(MODULE)
-    def test_watch(self, mock_rh: MagicMock) -> None:
+    def test_rain(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().show_storm_level(StormLevel.WATCH)
-        mock_rh.display.print_str.assert_called_with("WTCH")
+        HATInterface().show_storm_level(StormLevel.RAIN)
+        mock_rh.display.print_str.assert_called_with("RAIN")
 
     @patch(MODULE)
-    def test_warning(self, mock_rh: MagicMock) -> None:
+    def test_change(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().show_storm_level(StormLevel.WARNING)
-        mock_rh.display.print_str.assert_called_with("WARN")
+        HATInterface().show_storm_level(StormLevel.CHANGE)
+        mock_rh.display.print_str.assert_called_with("CHNG")
 
     @patch(MODULE)
-    def test_severe(self, mock_rh: MagicMock) -> None:
+    def test_fair(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().show_storm_level(StormLevel.SEVERE)
-        mock_rh.display.print_str.assert_called_with("SEVR")
+        HATInterface().show_storm_level(StormLevel.FAIR)
+        mock_rh.display.print_str.assert_called_with("FAIR")
+
+    @patch(MODULE)
+    def test_dry(self, mock_rh: MagicMock) -> None:
+        from storm_sense.hat_interface import HATInterface
+
+        HATInterface().show_storm_level(StormLevel.DRY)
+        mock_rh.display.print_str.assert_called_with("DRY ")
 
     @patch(MODULE)
     def test_show_called(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().show_storm_level(StormLevel.SEVERE)
+        HATInterface().show_storm_level(StormLevel.STORMY)
         mock_rh.display.show.assert_called()
 
 
 class TestUpdateLeds(unittest.TestCase):
-    """update_leds sets all 7 APA102 LEDs to the correct palette."""
+    """update_leds lights a single LED on the barometer gauge."""
 
     @patch(MODULE)
-    def test_clear_all_green(self, mock_rh: MagicMock) -> None:
+    def test_fair_green_at_pos_1(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().update_leds(StormLevel.CLEAR)
+        HATInterface().update_leds(StormLevel.FAIR)
 
-        expected = [call(i, 0, 80, 0) for i in range(7)]
-        mock_rh.rainbow.set_pixel.assert_has_calls(expected)
+        mock_rh.rainbow.clear.assert_called_once()
+        mock_rh.rainbow.set_pixel.assert_called_once_with(1, 0, 80, 0)
         mock_rh.rainbow.show.assert_called()
 
     @patch(MODULE)
-    def test_severe_all_red(self, mock_rh: MagicMock) -> None:
+    def test_stormy_red_at_pos_6(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().update_leds(StormLevel.SEVERE)
+        HATInterface().update_leds(StormLevel.STORMY)
 
-        expected = [call(i, 80, 0, 0) for i in range(7)]
-        mock_rh.rainbow.set_pixel.assert_has_calls(expected)
+        mock_rh.rainbow.clear.assert_called_once()
+        mock_rh.rainbow.set_pixel.assert_called_once_with(6, 80, 0, 0)
 
     @patch(MODULE)
-    def test_watch_mixed(self, mock_rh: MagicMock) -> None:
+    def test_rain_orange_at_pos_5(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().update_leds(StormLevel.WATCH)
+        HATInterface().update_leds(StormLevel.RAIN)
 
-        calls = mock_rh.rainbow.set_pixel.call_args_list
-        # First 4 green, last 3 yellow
-        for i in range(4):
-            self.assertEqual(calls[i], call(i, 0, 80, 0))
-        for i in range(4, 7):
-            self.assertEqual(calls[i], call(i, 80, 80, 0))
+        mock_rh.rainbow.set_pixel.assert_called_once_with(5, 80, 30, 0)
 
     @patch(MODULE)
-    def test_warning_mixed(self, mock_rh: MagicMock) -> None:
+    def test_change_yellow_at_pos_3(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().update_leds(StormLevel.WARNING)
+        HATInterface().update_leds(StormLevel.CHANGE)
 
-        calls = mock_rh.rainbow.set_pixel.call_args_list
-        # 2 green, 2 yellow, 3 orange
-        for i in range(2):
-            self.assertEqual(calls[i], call(i, 0, 80, 0))
-        for i in range(2, 4):
-            self.assertEqual(calls[i], call(i, 80, 80, 0))
-        for i in range(4, 7):
-            self.assertEqual(calls[i], call(i, 80, 30, 0))
+        mock_rh.rainbow.set_pixel.assert_called_once_with(3, 80, 80, 0)
+
+    @patch(MODULE)
+    def test_dry_cyan_at_pos_0(self, mock_rh: MagicMock) -> None:
+        from storm_sense.hat_interface import HATInterface
+
+        HATInterface().update_leds(StormLevel.DRY)
+
+        mock_rh.rainbow.set_pixel.assert_called_once_with(0, 0, 40, 80)
 
 
 class TestBuzzAlert(unittest.TestCase):
     """buzz_alert sounds appropriate tones per storm level."""
 
     @patch(MODULE)
-    def test_clear_no_sound(self, mock_rh: MagicMock) -> None:
+    def test_fair_no_sound(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().buzz_alert(StormLevel.CLEAR)
+        HATInterface().buzz_alert(StormLevel.FAIR)
         mock_rh.buzzer.midi_note.assert_not_called()
 
     @patch(MODULE)
-    def test_watch_single_c4(self, mock_rh: MagicMock) -> None:
+    def test_dry_no_sound(self, mock_rh: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().buzz_alert(StormLevel.WATCH)
+        HATInterface().buzz_alert(StormLevel.DRY)
+        mock_rh.buzzer.midi_note.assert_not_called()
+
+    @patch(MODULE)
+    def test_change_single_c4(self, mock_rh: MagicMock) -> None:
+        from storm_sense.hat_interface import HATInterface
+
+        HATInterface().buzz_alert(StormLevel.CHANGE)
         mock_rh.buzzer.midi_note.assert_called_once_with(60, 0.3)
 
     @patch("storm_sense.hat_interface.time")
     @patch(MODULE)
-    def test_warning_triple_a4(self, mock_rh: MagicMock, mock_time: MagicMock) -> None:
+    def test_rain_triple_a4(self, mock_rh: MagicMock, mock_time: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().buzz_alert(StormLevel.WARNING)
+        HATInterface().buzz_alert(StormLevel.RAIN)
 
         expected_midi = [call(69, 0.2)] * 3
         mock_rh.buzzer.midi_note.assert_has_calls(expected_midi)
         self.assertEqual(mock_rh.buzzer.midi_note.call_count, 3)
 
-        # Two gaps between three notes
         expected_sleep = [call(0.1)] * 2
         mock_time.sleep.assert_has_calls(expected_sleep)
         self.assertEqual(mock_time.sleep.call_count, 2)
 
     @patch("storm_sense.hat_interface.time")
     @patch(MODULE)
-    def test_severe_triple_a4(self, mock_rh: MagicMock, mock_time: MagicMock) -> None:
+    def test_stormy_triple_a4(self, mock_rh: MagicMock, mock_time: MagicMock) -> None:
         from storm_sense.hat_interface import HATInterface
 
-        HATInterface().buzz_alert(StormLevel.SEVERE)
+        HATInterface().buzz_alert(StormLevel.STORMY)
 
         self.assertEqual(mock_rh.buzzer.midi_note.call_count, 3)
         mock_rh.buzzer.midi_note.assert_any_call(69, 0.2)

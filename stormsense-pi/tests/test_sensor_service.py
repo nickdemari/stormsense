@@ -1,5 +1,7 @@
 """Tests for SensorService — BMP280 reading, calibration, and storm detection."""
 
+from __future__ import annotations
+
 import unittest
 from collections import deque
 from unittest.mock import patch, MagicMock
@@ -38,25 +40,26 @@ class TestSensorServiceRead(unittest.TestCase):
             svc.read()
 
         self.assertAlmostEqual(svc.raw_temperature, 28.0)
-        self.assertAlmostEqual(svc.temperature, 19.5)
+        # calibrated = 28 - (45-28)/1.2 ≈ 13.83
+        self.assertAlmostEqual(svc.temperature, 28.0 - 17.0 / 1.2)
         self.assertAlmostEqual(svc.pressure, 1010.0)
-        self.assertEqual(svc.storm_level, StormLevel.CLEAR)
+        self.assertEqual(svc.storm_level, StormLevel.FAIR)
         self.assertEqual(len(svc._session_log), 1)
         self.assertEqual(len(svc._pressure_history), 1)
 
 
 class TestTemperatureCalibration(unittest.TestCase):
-    """Temperature calibration: corrected = measured - (cpu - measured) / 2."""
+    """Temperature calibration: corrected = measured - (cpu - measured) / CPU_HEAT_FACTOR."""
 
     def test_calibration_math(self):
-        """measured=28, cpu=45 -> corrected = 28 - (45-28)/2 = 19.5."""
+        """measured=28, cpu=45, factor=1.2 -> corrected = 28 - (45-28)/1.2 ≈ 13.83."""
         svc, mock_rh = _make_service_with_mock_rh(temperature=28.0)
 
         with patch('storm_sense.sensor_service.rh', mock_rh), \
              patch('storm_sense.sensor_service.SensorService._read_cpu_temp', return_value=45.0):
             svc.read()
 
-        self.assertAlmostEqual(svc.temperature, 19.5)
+        self.assertAlmostEqual(svc.temperature, 28.0 - 17.0 / 1.2)
 
     def test_calibration_no_offset(self):
         """If cpu == measured, no calibration needed."""
@@ -89,7 +92,7 @@ class TestStormDetection(unittest.TestCase):
             svc.read()
             svc.read()
 
-        self.assertEqual(svc.storm_level, StormLevel.CLEAR)
+        self.assertEqual(svc.storm_level, StormLevel.FAIR)
         self.assertAlmostEqual(svc.pressure_delta_3h, 0.0)
 
     def test_watch_threshold(self):
@@ -103,7 +106,7 @@ class TestStormDetection(unittest.TestCase):
             mock_rh.weather.pressure.return_value = 1009.5  # delta = -3.5
             svc.read()
 
-        self.assertEqual(svc.storm_level, StormLevel.WATCH)
+        self.assertEqual(svc.storm_level, StormLevel.CHANGE)
         self.assertAlmostEqual(svc.pressure_delta_3h, -3.5)
 
     def test_warning_threshold(self):
@@ -117,7 +120,7 @@ class TestStormDetection(unittest.TestCase):
             mock_rh.weather.pressure.return_value = 1006.5  # delta = -6.5
             svc.read()
 
-        self.assertEqual(svc.storm_level, StormLevel.WARNING)
+        self.assertEqual(svc.storm_level, StormLevel.RAIN)
         self.assertAlmostEqual(svc.pressure_delta_3h, -6.5)
 
     def test_severe_threshold(self):
@@ -131,7 +134,7 @@ class TestStormDetection(unittest.TestCase):
             mock_rh.weather.pressure.return_value = 1002.5  # delta = -10.5
             svc.read()
 
-        self.assertEqual(svc.storm_level, StormLevel.SEVERE)
+        self.assertEqual(svc.storm_level, StormLevel.STORMY)
         self.assertAlmostEqual(svc.pressure_delta_3h, -10.5)
 
     def test_storm_deescalation(self):
@@ -145,10 +148,10 @@ class TestStormDetection(unittest.TestCase):
             mock_rh.weather.pressure.return_value = 1002.0  # SEVERE
             svc.read()
 
-        self.assertEqual(svc.storm_level, StormLevel.SEVERE)
+        self.assertEqual(svc.storm_level, StormLevel.STORMY)
 
         svc.reset_history()
-        self.assertEqual(svc.storm_level, StormLevel.CLEAR)
+        self.assertEqual(svc.storm_level, StormLevel.FAIR)
         self.assertIsNone(svc.pressure_delta_3h)
 
     def test_delta_none_with_single_sample(self):
@@ -159,7 +162,7 @@ class TestStormDetection(unittest.TestCase):
             svc.read()
 
         self.assertIsNone(svc.pressure_delta_3h)
-        self.assertEqual(svc.storm_level, StormLevel.CLEAR)
+        self.assertEqual(svc.storm_level, StormLevel.FAIR)
 
     def test_exact_boundary_thresholds(self):
         """Exactly -3.0, -6.0, -10.0 should trigger WATCH, WARNING, SEVERE."""
@@ -172,7 +175,7 @@ class TestStormDetection(unittest.TestCase):
             svc.read()
             mock_rh.weather.pressure.return_value = 1010.0
             svc.read()
-        self.assertEqual(svc.storm_level, StormLevel.WATCH)
+        self.assertEqual(svc.storm_level, StormLevel.CHANGE)
 
         svc.reset_history()
 
@@ -183,7 +186,7 @@ class TestStormDetection(unittest.TestCase):
             svc.read()
             mock_rh.weather.pressure.return_value = 1007.0
             svc.read()
-        self.assertEqual(svc.storm_level, StormLevel.WARNING)
+        self.assertEqual(svc.storm_level, StormLevel.RAIN)
 
         svc.reset_history()
 
@@ -194,7 +197,7 @@ class TestStormDetection(unittest.TestCase):
             svc.read()
             mock_rh.weather.pressure.return_value = 1003.0
             svc.read()
-        self.assertEqual(svc.storm_level, StormLevel.SEVERE)
+        self.assertEqual(svc.storm_level, StormLevel.STORMY)
 
 
 class TestHistoryCaps(unittest.TestCase):
@@ -234,13 +237,14 @@ class TestGetStatus(unittest.TestCase):
         status = svc.get_status()
 
         required_keys = {
-            'temperature', 'raw_temperature', 'pressure',
+            'temperature', 'temperature_f', 'raw_temperature', 'pressure',
             'storm_level', 'storm_label', 'samples_collected',
             'history_full', 'display_mode', 'pressure_delta_3h',
         }
         self.assertEqual(set(status.keys()), required_keys)
 
         self.assertIsInstance(status['temperature'], float)
+        self.assertIsInstance(status['temperature_f'], float)
         self.assertIsInstance(status['raw_temperature'], float)
         self.assertIsInstance(status['pressure'], float)
         self.assertIsInstance(status['storm_level'], int)
@@ -257,11 +261,13 @@ class TestGetStatus(unittest.TestCase):
             svc.read()
 
         status = svc.get_status()
-        self.assertAlmostEqual(status['temperature'], 19.5)
+        expected_temp = 28.0 - 17.0 / 1.2
+        self.assertAlmostEqual(status['temperature'], expected_temp)
+        self.assertAlmostEqual(status['temperature_f'], expected_temp * 9.0 / 5.0 + 32.0)
         self.assertAlmostEqual(status['raw_temperature'], 28.0)
         self.assertAlmostEqual(status['pressure'], 1013.0)
-        self.assertEqual(status['storm_level'], 0)
-        self.assertEqual(status['storm_label'], 'CLEAR')
+        self.assertEqual(status['storm_level'], 1)
+        self.assertEqual(status['storm_label'], 'FAIR')
         self.assertEqual(status['samples_collected'], 1)
         self.assertFalse(status['history_full'])
         self.assertEqual(status['display_mode'], 'TEMPERATURE')
@@ -283,11 +289,12 @@ class TestGetHistory(unittest.TestCase):
         self.assertIsInstance(history, list)
         self.assertEqual(len(history), 2)
 
-        required_keys = {'timestamp', 'temperature', 'raw_temperature', 'pressure', 'storm_level'}
+        required_keys = {'timestamp', 'temperature', 'temperature_f', 'raw_temperature', 'pressure', 'storm_level'}
         for entry in history:
             self.assertEqual(set(entry.keys()), required_keys)
             self.assertIsInstance(entry['timestamp'], float)
             self.assertIsInstance(entry['temperature'], float)
+            self.assertIsInstance(entry['temperature_f'], float)
             self.assertIsInstance(entry['raw_temperature'], float)
             self.assertIsInstance(entry['pressure'], float)
             self.assertIsInstance(entry['storm_level'], int)
@@ -311,7 +318,7 @@ class TestResetHistory(unittest.TestCase):
 
         self.assertEqual(len(svc._pressure_history), 0)
         self.assertEqual(len(svc._session_log), 0)
-        self.assertEqual(svc.storm_level, StormLevel.CLEAR)
+        self.assertEqual(svc.storm_level, StormLevel.FAIR)
         self.assertIsNone(svc.pressure_delta_3h)
 
 
