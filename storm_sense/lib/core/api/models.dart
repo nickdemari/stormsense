@@ -7,6 +7,7 @@ part 'models.g.dart';
 sealed class StormStatus with _$StormStatus {
   const factory StormStatus({
     required double temperature,
+    @JsonKey(name: 'temperature_f') required double temperatureF,
     @JsonKey(name: 'raw_temperature') required double rawTemperature,
     required double pressure,
     @JsonKey(name: 'storm_level') required int stormLevel,
@@ -26,6 +27,7 @@ sealed class Reading with _$Reading {
   const factory Reading({
     required double timestamp,
     required double temperature,
+    @JsonKey(name: 'temperature_f') required double temperatureF,
     @JsonKey(name: 'raw_temperature') required double rawTemperature,
     required double pressure,
     @JsonKey(name: 'storm_level') required int stormLevel,

@@ -1,10 +1,11 @@
 import 'dart:ui';
 
 enum StormLevel {
-  clear(0, 'Clear', Color(0xFF4CAF50)),
-  watch(1, 'Watch', Color(0xFFFFC107)),
-  warning(2, 'Warning', Color(0xFFFF9800)),
-  severe(3, 'Severe', Color(0xFFF44336));
+  dry(0, 'Dry', Color(0xFF0288D1)),
+  fair(1, 'Fair', Color(0xFF4CAF50)),
+  change(2, 'Change', Color(0xFFFFC107)),
+  rain(3, 'Rain', Color(0xFFFF9800)),
+  stormy(4, 'Stormy', Color(0xFFF44336));
 
   const StormLevel(this.value, this.label, this.color);
   final int value;
@@ -13,5 +14,5 @@ enum StormLevel {
 
   static StormLevel fromInt(int v) =>
       StormLevel.values.firstWhere((e) => e.value == v,
-          orElse: () => StormLevel.clear);
+          orElse: () => StormLevel.fair);
 }
