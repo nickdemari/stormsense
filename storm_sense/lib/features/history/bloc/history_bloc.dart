@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:storm_sense/core/api/storm_sense_api.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
@@ -7,9 +9,11 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   HistoryBloc() : super(const HistoryInitial()) {
     on<HistoryStarted>(_onStarted);
     on<HistoryRefreshed>(_onRefreshed);
+    on<HistoryPolled>(_onPolled);
   }
 
   StormSenseApi? _api;
+  Timer? _pollTimer;
 
   Future<void> _fetchHistory(Emitter<HistoryState> emit) async {
     try {
@@ -27,6 +31,11 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     emit(const HistoryLoading());
     _api = StormSenseApi(baseUrl: event.baseUrl);
     await _fetchHistory(emit);
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(
+      Duration(seconds: event.pollIntervalSeconds),
+      (_) => add(const HistoryPolled()),
+    );
   }
 
   Future<void> _onRefreshed(
@@ -35,5 +44,19 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   ) async {
     if (_api == null) return;
     await _fetchHistory(emit);
+  }
+
+  Future<void> _onPolled(
+    HistoryPolled event,
+    Emitter<HistoryState> emit,
+  ) async {
+    if (_api == null) return;
+    await _fetchHistory(emit);
+  }
+
+  @override
+  Future<void> close() {
+    _pollTimer?.cancel();
+    return super.close();
   }
 }

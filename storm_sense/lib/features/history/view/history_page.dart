@@ -4,6 +4,7 @@ import 'package:storm_sense/features/history/bloc/history_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/features/history/bloc/history_state.dart';
 import 'package:storm_sense/features/history/view/pressure_chart.dart';
+import 'package:storm_sense/features/history/view/temperature_chart.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -54,6 +55,19 @@ class HistoryPage extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 children: [
                   const Text(
+                    'Temperature Over Time',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 250,
+                    child: TemperatureChart(readings: state.readings),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
                     'Pressure Over Time',
                     style: TextStyle(
                       fontSize: 18,
@@ -62,7 +76,7 @@ class HistoryPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 300,
+                    height: 250,
                     child: PressureChart(readings: state.readings),
                   ),
                   const SizedBox(height: 24),

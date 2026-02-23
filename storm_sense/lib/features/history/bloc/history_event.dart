@@ -8,13 +8,18 @@ sealed class HistoryEvent extends Equatable {
 }
 
 final class HistoryStarted extends HistoryEvent {
-  const HistoryStarted(this.baseUrl);
+  const HistoryStarted(this.baseUrl, {this.pollIntervalSeconds = 5});
   final String baseUrl;
+  final int pollIntervalSeconds;
 
   @override
-  List<Object?> get props => [baseUrl];
+  List<Object?> get props => [baseUrl, pollIntervalSeconds];
 }
 
 final class HistoryRefreshed extends HistoryEvent {
   const HistoryRefreshed();
+}
+
+final class HistoryPolled extends HistoryEvent {
+  const HistoryPolled();
 }
