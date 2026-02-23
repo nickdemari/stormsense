@@ -42,32 +42,38 @@ class _StormSenseAppState extends State<StormSenseApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => ConnectionBloc(),
-        ),
-        BlocProvider(
-          create: (_) => SettingsBloc()..add(const SettingsLoaded()),
-        ),
-        BlocProvider(
-          create: (_) => DashboardBloc(
-            notificationService: widget.notificationService,
+    return RepositoryProvider<StormNotificationService>.value(
+      value: widget.notificationService,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => ConnectionBloc(),
           ),
-        ),
-        BlocProvider(
-          create: (_) => HistoryBloc(),
-        ),
-      ],
-      child: BlocListener<ConnectionBloc, conn.ConnectionState>(
+          BlocProvider(
+            create: (_) => SettingsBloc()..add(const SettingsLoaded()),
+          ),
+          BlocProvider(
+            create: (_) => DashboardBloc(
+              notificationService: widget.notificationService,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => HistoryBloc(),
+          ),
+        ],
+        child: BlocListener<ConnectionBloc, conn.ConnectionState>(
         listener: (context, state) {
           if (state is conn.ConnectionSuccess) {
-            context
-                .read<DashboardBloc>()
-                .add(DashboardStarted(state.baseUrl));
-            context
-                .read<HistoryBloc>()
-                .add(HistoryStarted(state.baseUrl));
+            final pollInterval =
+                context.read<SettingsBloc>().state.pollIntervalSeconds;
+            context.read<DashboardBloc>().add(DashboardStarted(
+                  state.baseUrl,
+                  pollIntervalSeconds: pollInterval,
+                ));
+            context.read<HistoryBloc>().add(HistoryStarted(
+                  state.baseUrl,
+                  pollIntervalSeconds: pollInterval,
+                ));
             _router.go('/dashboard');
           }
         },
@@ -77,6 +83,7 @@ class _StormSenseAppState extends State<StormSenseApp> {
           darkTheme: StormTheme.dark,
           routerConfig: _router,
         ),
+      ),
       ),
     );
   }
