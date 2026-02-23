@@ -8,11 +8,12 @@ sealed class DashboardEvent extends Equatable {
 }
 
 final class DashboardStarted extends DashboardEvent {
-  const DashboardStarted(this.baseUrl);
+  const DashboardStarted(this.baseUrl, {this.pollIntervalSeconds = 5});
   final String baseUrl;
+  final int pollIntervalSeconds;
 
   @override
-  List<Object?> get props => [baseUrl];
+  List<Object?> get props => [baseUrl, pollIntervalSeconds];
 }
 
 final class DashboardRefreshed extends DashboardEvent {

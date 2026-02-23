@@ -38,7 +38,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final status = await _api!.getStatus();
 
       // Check for storm escalation
-      if (status.stormLevel > _previousStormLevel && status.stormLevel >= 2) {
+      if (status.stormLevel > _previousStormLevel && status.stormLevel >= 3) {
         _notificationService?.showStormAlert(status.stormLevel);
       }
       _previousStormLevel = status.stormLevel;
@@ -56,7 +56,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(const DashboardLoading());
     _api = StormSenseApi(baseUrl: event.baseUrl);
     await _fetchStatus(emit);
-    _startPolling(5);
+    _startPolling(event.pollIntervalSeconds);
   }
 
   Future<void> _onRefreshed(

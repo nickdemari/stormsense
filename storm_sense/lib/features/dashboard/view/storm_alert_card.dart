@@ -50,19 +50,21 @@ class StormAlertCard extends StatelessWidget {
 
   IconData _iconForLevel(StormLevel level) {
     return switch (level) {
-      StormLevel.clear => Icons.wb_sunny,
-      StormLevel.watch => Icons.cloud,
-      StormLevel.warning => Icons.thunderstorm,
-      StormLevel.severe => Icons.warning,
+      StormLevel.dry => Icons.wb_sunny,
+      StormLevel.fair => Icons.wb_sunny_outlined,
+      StormLevel.change => Icons.cloud,
+      StormLevel.rain => Icons.thunderstorm,
+      StormLevel.stormy => Icons.warning,
     };
   }
 
   String _descriptionForLevel(StormLevel level) {
     return switch (level) {
-      StormLevel.clear => 'Conditions are stable.',
-      StormLevel.watch => 'Moderate pressure drop detected.',
-      StormLevel.warning => 'Rapid pressure drop. Storm approaching.',
-      StormLevel.severe => 'Severe pressure drop! Take precautions.',
+      StormLevel.dry => 'High pressure. Clear and dry.',
+      StormLevel.fair => 'Conditions are stable.',
+      StormLevel.change => 'Moderate pressure drop detected.',
+      StormLevel.rain => 'Rapid pressure drop. Rain likely.',
+      StormLevel.stormy => 'Severe pressure drop! Storm approaching.',
     };
   }
 }
