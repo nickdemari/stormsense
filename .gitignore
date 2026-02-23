@@ -31,3 +31,7 @@ Thumbs.db
 # Claude Flow internals
 .claude-flow/
 .claude/
+.swarm/
+
+# Firebase
+firebase-debug.log
