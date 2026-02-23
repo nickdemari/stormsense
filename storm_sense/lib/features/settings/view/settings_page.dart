@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:storm_sense/notifications/storm_notification_service.dart';
 
 import '../bloc/settings_bloc.dart';
 import '../bloc/settings_event.dart';
@@ -82,10 +85,100 @@ class SettingsPage extends StatelessWidget {
                     }
                   },
                 ),
+              const Divider(),
+              _SectionHeader(title: 'Permissions'),
+              _NotificationPermissionTile(
+                service:
+                    context.read<StormNotificationService>(),
+              ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _NotificationPermissionTile extends StatefulWidget {
+  const _NotificationPermissionTile({required this.service});
+
+  final StormNotificationService service;
+
+  @override
+  State<_NotificationPermissionTile> createState() =>
+      _NotificationPermissionTileState();
+}
+
+class _NotificationPermissionTileState
+    extends State<_NotificationPermissionTile> with WidgetsBindingObserver {
+  bool? _enabled;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermission();
+    }
+  }
+
+  Future<void> _checkPermission() async {
+    final enabled = await widget.service.areNotificationsEnabled();
+    if (mounted) setState(() => _enabled = enabled);
+  }
+
+  Future<void> _requestPermission() async {
+    final granted = await widget.service.requestNotificationPermission();
+    if (mounted) setState(() => _enabled = granted);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = _enabled;
+
+    if (enabled == null) {
+      return const ListTile(
+        leading: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        title: Text('Notifications'),
+      );
+    }
+
+    return ListTile(
+      leading: Icon(
+        enabled ? Icons.notifications_active : Icons.notifications_off,
+        color: enabled
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.error,
+      ),
+      title: const Text('Notifications'),
+      subtitle: Text(
+        enabled
+            ? 'Storm alerts will be delivered'
+            : Platform.isAndroid
+                ? 'Required for storm alerts'
+                : 'Enable in system Settings > StormSense',
+      ),
+      trailing: enabled
+          ? const Icon(Icons.check_circle, color: Colors.green)
+          : FilledButton(
+              onPressed: _requestPermission,
+              child: const Text('Enable'),
+            ),
     );
   }
 }

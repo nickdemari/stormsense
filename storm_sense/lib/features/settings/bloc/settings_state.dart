@@ -4,7 +4,7 @@ import 'settings_event.dart';
 
 class SettingsState extends Equatable {
   const SettingsState({
-    this.tempUnit = TemperatureUnit.celsius,
+    this.tempUnit = TemperatureUnit.fahrenheit,
     this.pressureUnit = PressureUnit.hpa,
     this.pollIntervalSeconds = 5,
   });
