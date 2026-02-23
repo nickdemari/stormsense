@@ -43,5 +43,5 @@ class ApiServer:
         def api_health():
             return jsonify({
                 'status': 'ok',
-                'uptime_samples': self._sensor_service._samples_collected,
+                'uptime_samples': len(self._sensor_service._pressure_history),
             })
