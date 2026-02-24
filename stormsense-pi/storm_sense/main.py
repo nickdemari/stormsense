@@ -139,6 +139,7 @@ class StormSenseApp:
             logger.exception('API server error')
         finally:
             self._shutdown_event.set()
+            self._sensor.close()
             self._hat.clear_all()
             logger.info('StormSense shutdown complete')
 
