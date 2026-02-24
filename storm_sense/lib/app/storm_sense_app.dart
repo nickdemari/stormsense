@@ -11,6 +11,7 @@ import 'package:storm_sense/features/history/bloc/history_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/features/settings/bloc/settings_bloc.dart';
 import 'package:storm_sense/features/settings/bloc/settings_event.dart';
+import 'package:storm_sense/features/settings/bloc/settings_state.dart';
 import 'package:storm_sense/notifications/storm_notification_service.dart';
 
 class StormSenseApp extends StatefulWidget {
@@ -61,29 +62,50 @@ class _StormSenseAppState extends State<StormSenseApp> {
             create: (_) => HistoryBloc(),
           ),
         ],
-        child: BlocListener<ConnectionBloc, conn.ConnectionState>(
-        listener: (context, state) {
-          if (state is conn.ConnectionSuccess) {
-            final pollInterval =
-                context.read<SettingsBloc>().state.pollIntervalSeconds;
-            context.read<DashboardBloc>().add(DashboardStarted(
-                  state.baseUrl,
-                  pollIntervalSeconds: pollInterval,
-                ));
-            context.read<HistoryBloc>().add(HistoryStarted(
-                  state.baseUrl,
-                  pollIntervalSeconds: pollInterval,
-                ));
-            _router.go('/dashboard');
-          }
-        },
-        child: MaterialApp.router(
-          title: 'StormSense',
-          theme: StormTheme.light,
-          darkTheme: StormTheme.dark,
-          routerConfig: _router,
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ConnectionBloc, conn.ConnectionState>(
+              listener: (context, state) {
+                if (state is conn.ConnectionSuccess) {
+                  final pollInterval =
+                      context.read<SettingsBloc>().state.pollIntervalSeconds;
+                  context.read<DashboardBloc>().add(DashboardStarted(
+                        state.baseUrl,
+                        pollIntervalSeconds: pollInterval,
+                      ));
+                  context.read<HistoryBloc>().add(HistoryStarted(
+                        state.baseUrl,
+                        pollIntervalSeconds: pollInterval,
+                      ));
+                  _router.go('/dashboard');
+                }
+              },
+            ),
+            BlocListener<SettingsBloc, SettingsState>(
+              listenWhen: (previous, current) =>
+                  previous.pollIntervalSeconds !=
+                  current.pollIntervalSeconds,
+              listener: (context, state) {
+                context.read<DashboardBloc>().add(
+                      DashboardPollIntervalChanged(
+                        state.pollIntervalSeconds,
+                      ),
+                    );
+                context.read<HistoryBloc>().add(
+                      HistoryPollIntervalChanged(
+                        state.pollIntervalSeconds,
+                      ),
+                    );
+              },
+            ),
+          ],
+          child: MaterialApp.router(
+            title: 'StormSense',
+            theme: StormTheme.light,
+            darkTheme: StormTheme.dark,
+            routerConfig: _router,
+          ),
         ),
-      ),
       ),
     );
   }
