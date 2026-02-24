@@ -9,6 +9,8 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   HistoryBloc() : super(const HistoryInitial()) {
     on<HistoryStarted>(_onStarted);
     on<HistoryRefreshed>(_onRefreshed);
+    on<HistoryPollIntervalChanged>(_onPollIntervalChanged);
+    on<HistoryStopped>(_onStopped);
     on<HistoryPolled>(_onPolled);
   }
 
@@ -20,7 +22,12 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       final readings = await _api!.getHistory();
       emit(HistoryLoaded(readings: readings));
     } catch (e) {
-      emit(HistoryError('Failed to load history: ${e.toString()}'));
+      final previousReadings =
+          state is HistoryLoaded ? (state as HistoryLoaded).readings : null;
+      emit(HistoryError(
+        'Failed to load history: ${e.toString()}',
+        previousReadings: previousReadings,
+      ));
     }
   }
 
@@ -44,6 +51,28 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   ) async {
     if (_api == null) return;
     await _fetchHistory(emit);
+  }
+
+  void _onPollIntervalChanged(
+    HistoryPollIntervalChanged event,
+    Emitter<HistoryState> emit,
+  ) {
+    if (_api == null) return;
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(
+      Duration(seconds: event.seconds),
+      (_) => add(const HistoryPolled()),
+    );
+  }
+
+  void _onStopped(
+    HistoryStopped event,
+    Emitter<HistoryState> emit,
+  ) {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _api = null;
+    emit(const HistoryInitial());
   }
 
   Future<void> _onPolled(

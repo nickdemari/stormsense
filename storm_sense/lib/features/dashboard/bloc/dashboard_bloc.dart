@@ -17,6 +17,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<DashboardStarted>(_onStarted);
     on<DashboardRefreshed>(_onRefreshed);
     on<DashboardStopped>(_onStopped);
+    on<DashboardPollIntervalChanged>(_onPollIntervalChanged);
     on<_DashboardPolled>(_onPolled);
   }
 
@@ -45,7 +46,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
       emit(DashboardLoaded(status: status));
     } catch (e) {
-      emit(DashboardError('Failed to fetch status: ${e.toString()}'));
+      final previousStatus =
+          state is DashboardLoaded ? (state as DashboardLoaded).status : null;
+      emit(DashboardError(
+        'Failed to fetch status: ${e.toString()}',
+        previousStatus: previousStatus,
+      ));
     }
   }
 
@@ -75,12 +81,22 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     await _fetchStatus(emit);
   }
 
+  void _onPollIntervalChanged(
+    DashboardPollIntervalChanged event,
+    Emitter<DashboardState> emit,
+  ) {
+    if (_api == null) return;
+    _startPolling(event.seconds);
+  }
+
   void _onStopped(
     DashboardStopped event,
     Emitter<DashboardState> emit,
   ) {
     _pollTimer?.cancel();
     _pollTimer = null;
+    _api = null;
+    emit(const DashboardInitial());
   }
 
   @override

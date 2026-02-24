@@ -25,9 +25,10 @@ final class HistoryLoaded extends HistoryState {
 }
 
 final class HistoryError extends HistoryState {
-  const HistoryError(this.message);
+  const HistoryError(this.message, {this.previousReadings});
   final String message;
+  final List<Reading>? previousReadings;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, previousReadings];
 }

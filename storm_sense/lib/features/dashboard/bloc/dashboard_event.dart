@@ -24,6 +24,14 @@ final class DashboardStopped extends DashboardEvent {
   const DashboardStopped();
 }
 
+final class DashboardPollIntervalChanged extends DashboardEvent {
+  const DashboardPollIntervalChanged(this.seconds);
+  final int seconds;
+
+  @override
+  List<Object?> get props => [seconds];
+}
+
 final class _DashboardPolled extends DashboardEvent {
   const _DashboardPolled();
 }
