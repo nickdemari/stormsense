@@ -1,17 +1,32 @@
-# storm_sense
+# StormSense Flutter App
 
-A new Flutter project.
+Companion app for the [StormSense](../README.md) Raspberry Pi weather station.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Dashboard** — Live temperature, pressure, and storm level from your Pi
+- **History** — 24-hour pressure and temperature charts with time range filtering
+- **Notifications** — Local push alerts when storm level escalates to Warning or Severe
+- **Settings** — Temperature units (F/C), pressure units (hPa/inHg), poll interval
 
-A few resources to get you started if this is your first Flutter project:
+## Setup
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter test
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Requires Flutter SDK 3.11+.
+
+## Architecture
+
+- **State management:** flutter_bloc
+- **HTTP client:** Dio
+- **Charts:** fl_chart
+- **Code generation:** Freezed + json_serializable
+- **Routing:** GoRouter
+- **Persistence:** SharedPreferences
+
+Each feature follows the BLoC pattern with a `bloc/` directory for events, states, and the BLoC itself, and a `view/` directory for widgets.
