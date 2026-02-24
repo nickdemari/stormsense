@@ -20,6 +20,18 @@ final class HistoryRefreshed extends HistoryEvent {
   const HistoryRefreshed();
 }
 
+final class HistoryPollIntervalChanged extends HistoryEvent {
+  const HistoryPollIntervalChanged(this.seconds);
+  final int seconds;
+
+  @override
+  List<Object?> get props => [seconds];
+}
+
+final class HistoryStopped extends HistoryEvent {
+  const HistoryStopped();
+}
+
 final class HistoryPolled extends HistoryEvent {
   const HistoryPolled();
 }

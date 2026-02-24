@@ -7,6 +7,7 @@ void main() {
     test('fromJson with null pressure_delta_3h', () {
       final json = {
         'temperature': 22.5,
+        'temperature_f': 72.5,
         'raw_temperature': 22.48,
         'pressure': 1013.25,
         'storm_level': 0,
@@ -33,6 +34,7 @@ void main() {
     test('fromJson with non-null pressure_delta_3h', () {
       final json = {
         'temperature': 18.3,
+        'temperature_f': 64.94,
         'raw_temperature': 18.27,
         'pressure': 1008.50,
         'storm_level': 2,
@@ -62,6 +64,7 @@ void main() {
       final json = {
         'timestamp': 1700000000.0,
         'temperature': 21.0,
+        'temperature_f': 69.8,
         'raw_temperature': 20.95,
         'pressure': 1012.0,
         'storm_level': 1,
@@ -78,16 +81,16 @@ void main() {
   });
 
   group('StormLevel', () {
-    test('fromInt(0) returns clear', () {
-      expect(StormLevel.fromInt(0), StormLevel.clear);
+    test('fromInt(0) returns dry', () {
+      expect(StormLevel.fromInt(0), StormLevel.dry);
     });
 
-    test('fromInt(2) returns warning', () {
-      expect(StormLevel.fromInt(2), StormLevel.warning);
+    test('fromInt(2) returns change', () {
+      expect(StormLevel.fromInt(2), StormLevel.change);
     });
 
-    test('fromInt(99) returns clear as fallback', () {
-      expect(StormLevel.fromInt(99), StormLevel.clear);
+    test('fromInt(99) returns fair as fallback', () {
+      expect(StormLevel.fromInt(99), StormLevel.fair);
     });
 
     test('each StormLevel has a non-null color', () {

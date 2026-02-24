@@ -5,22 +5,56 @@ import 'package:storm_sense/core/api/storm_sense_api.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/features/history/bloc/history_state.dart';
 
+/// Max readings held in memory — matches server-side limit.
+const _kMaxReadings = 5000;
+
 class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   HistoryBloc() : super(const HistoryInitial()) {
     on<HistoryStarted>(_onStarted);
     on<HistoryRefreshed>(_onRefreshed);
+    on<HistoryPollIntervalChanged>(_onPollIntervalChanged);
+    on<HistoryStopped>(_onStopped);
     on<HistoryPolled>(_onPolled);
   }
 
   StormSenseApi? _api;
   Timer? _pollTimer;
 
+  /// Full fetch — replaces all readings.
   Future<void> _fetchHistory(Emitter<HistoryState> emit) async {
     try {
       final readings = await _api!.getHistory();
       emit(HistoryLoaded(readings: readings));
     } catch (e) {
-      emit(HistoryError('Failed to load history: ${e.toString()}'));
+      final previousReadings =
+          state is HistoryLoaded ? (state as HistoryLoaded).readings : null;
+      emit(HistoryError(
+        'Failed to load history: ${e.toString()}',
+        previousReadings: previousReadings,
+      ));
+    }
+  }
+
+  /// Incremental fetch — appends only new readings since the last timestamp.
+  Future<void> _fetchIncremental(Emitter<HistoryState> emit) async {
+    final current = state;
+    if (current is! HistoryLoaded || current.readings.isEmpty) {
+      return _fetchHistory(emit);
+    }
+    try {
+      final lastTs = current.readings.last.timestamp.toDouble();
+      final newReadings = await _api!.getHistory(since: lastTs);
+      if (newReadings.isEmpty) return;
+      var merged = [...current.readings, ...newReadings];
+      if (merged.length > _kMaxReadings) {
+        merged = merged.sublist(merged.length - _kMaxReadings);
+      }
+      emit(HistoryLoaded(readings: merged));
+    } catch (e) {
+      emit(HistoryError(
+        'Failed to load history: ${e.toString()}',
+        previousReadings: current.readings,
+      ));
     }
   }
 
@@ -46,12 +80,34 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     await _fetchHistory(emit);
   }
 
+  void _onPollIntervalChanged(
+    HistoryPollIntervalChanged event,
+    Emitter<HistoryState> emit,
+  ) {
+    if (_api == null) return;
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(
+      Duration(seconds: event.seconds),
+      (_) => add(const HistoryPolled()),
+    );
+  }
+
+  void _onStopped(
+    HistoryStopped event,
+    Emitter<HistoryState> emit,
+  ) {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _api = null;
+    emit(const HistoryInitial());
+  }
+
   Future<void> _onPolled(
     HistoryPolled event,
     Emitter<HistoryState> emit,
   ) async {
     if (_api == null) return;
-    await _fetchHistory(emit);
+    await _fetchIncremental(emit);
   }
 
   @override

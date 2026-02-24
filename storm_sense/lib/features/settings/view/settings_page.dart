@@ -2,6 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
+import 'package:storm_sense/features/history/bloc/history_bloc.dart';
+import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/notifications/storm_notification_service.dart';
 
 import '../bloc/settings_bloc.dart';
@@ -13,104 +17,218 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
-          return ListView(
-            children: [
-              _SectionHeader(title: 'Temperature Unit'),
-              RadioListTile<TemperatureUnit>(
-                title: const Text('\u00B0C (Celsius)'),
-                value: TemperatureUnit.celsius,
-                groupValue: state.tempUnit,
-                onChanged: (value) {
-                  if (value != null) {
-                    context
-                        .read<SettingsBloc>()
-                        .add(TemperatureUnitChanged(value));
-                  }
-                },
-              ),
-              RadioListTile<TemperatureUnit>(
-                title: const Text('\u00B0F (Fahrenheit)'),
-                value: TemperatureUnit.fahrenheit,
-                groupValue: state.tempUnit,
-                onChanged: (value) {
-                  if (value != null) {
-                    context
-                        .read<SettingsBloc>()
-                        .add(TemperatureUnitChanged(value));
-                  }
-                },
-              ),
-              const Divider(),
-              _SectionHeader(title: 'Pressure Unit'),
-              RadioListTile<PressureUnit>(
-                title: const Text('hPa (Hectopascal)'),
-                value: PressureUnit.hpa,
-                groupValue: state.pressureUnit,
-                onChanged: (value) {
-                  if (value != null) {
-                    context
-                        .read<SettingsBloc>()
-                        .add(PressureUnitChanged(value));
-                  }
-                },
-              ),
-              RadioListTile<PressureUnit>(
-                title: const Text('inHg (Inches of Mercury)'),
-                value: PressureUnit.inhg,
-                groupValue: state.pressureUnit,
-                onChanged: (value) {
-                  if (value != null) {
-                    context
-                        .read<SettingsBloc>()
-                        .add(PressureUnitChanged(value));
-                  }
-                },
-              ),
-              const Divider(),
-              _SectionHeader(title: 'Poll Interval'),
-              for (final seconds in [5, 10, 30])
-                RadioListTile<int>(
-                  title: Text('${seconds}s'),
-                  value: seconds,
-                  groupValue: state.pollIntervalSeconds,
-                  onChanged: (value) {
-                    if (value != null) {
+      body: SafeArea(
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, state) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Text(
+                  'Settings',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Temperature Unit
+                _SettingsCard(
+                  title: 'Temperature Unit',
+                  icon: Icons.thermostat_outlined,
+                  iconColor: const Color(0xFFF59E0B),
+                  child: SegmentedButton<TemperatureUnit>(
+                    expandedInsets: EdgeInsets.zero,
+                    segments: const [
+                      ButtonSegment(
+                        value: TemperatureUnit.celsius,
+                        label: Text('Celsius'),
+                      ),
+                      ButtonSegment(
+                        value: TemperatureUnit.fahrenheit,
+                        label: Text('Fahrenheit'),
+                      ),
+                    ],
+                    selected: {state.tempUnit},
+                    onSelectionChanged: (selected) {
                       context
                           .read<SettingsBloc>()
-                          .add(PollIntervalChanged(value));
-                    }
+                          .add(TemperatureUnitChanged(selected.first));
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Pressure Unit
+                _SettingsCard(
+                  title: 'Pressure Unit',
+                  icon: Icons.speed_outlined,
+                  iconColor: const Color(0xFF38BDF8),
+                  child: SegmentedButton<PressureUnit>(
+                    expandedInsets: EdgeInsets.zero,
+                    segments: const [
+                      ButtonSegment(
+                        value: PressureUnit.hpa,
+                        label: Text('hPa'),
+                      ),
+                      ButtonSegment(
+                        value: PressureUnit.inhg,
+                        label: Text('inHg'),
+                      ),
+                    ],
+                    selected: {state.pressureUnit},
+                    onSelectionChanged: (selected) {
+                      context
+                          .read<SettingsBloc>()
+                          .add(PressureUnitChanged(selected.first));
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Poll Interval
+                _SettingsCard(
+                  title: 'Poll Interval',
+                  icon: Icons.timer_outlined,
+                  iconColor: const Color(0xFF34D399),
+                  child: SegmentedButton<int>(
+                    expandedInsets: EdgeInsets.zero,
+                    segments: const [
+                      ButtonSegment(value: 5, label: Text('5s')),
+                      ButtonSegment(value: 10, label: Text('10s')),
+                      ButtonSegment(value: 30, label: Text('30s')),
+                    ],
+                    selected: {state.pollIntervalSeconds},
+                    onSelectionChanged: (selected) {
+                      context
+                          .read<SettingsBloc>()
+                          .add(PollIntervalChanged(selected.first));
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Notifications
+                _NotificationCard(
+                  service: context.read<StormNotificationService>(),
+                ),
+                const SizedBox(height: 24),
+
+                // Disconnect
+                _DisconnectCard(
+                  onDisconnect: () {
+                    context
+                        .read<DashboardBloc>()
+                        .add(const DashboardStopped());
+                    context
+                        .read<HistoryBloc>()
+                        .add(const HistoryStopped());
+                    context.go('/connect');
                   },
                 ),
-              const Divider(),
-              _SectionHeader(title: 'Permissions'),
-              _NotificationPermissionTile(
-                service:
-                    context.read<StormNotificationService>(),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-class _NotificationPermissionTile extends StatefulWidget {
-  const _NotificationPermissionTile({required this.service});
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  iconColor.withValues(alpha: 0.3),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(icon, size: 18, color: iconColor),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatefulWidget {
+  const _NotificationCard({required this.service});
 
   final StormNotificationService service;
 
   @override
-  State<_NotificationPermissionTile> createState() =>
-      _NotificationPermissionTileState();
+  State<_NotificationCard> createState() => _NotificationCardState();
 }
 
-class _NotificationPermissionTileState
-    extends State<_NotificationPermissionTile> with WidgetsBindingObserver {
+class _NotificationCardState extends State<_NotificationCard>
+    with WidgetsBindingObserver {
   bool? _enabled;
 
   @override
@@ -145,58 +263,184 @@ class _NotificationPermissionTileState
 
   @override
   Widget build(BuildContext context) {
-    final enabled = _enabled;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    const accent = Color(0xFFA78BFA);
 
-    if (enabled == null) {
-      return const ListTile(
-        leading: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.2),
         ),
-        title: Text('Notifications'),
-      );
-    }
-
-    return ListTile(
-      leading: Icon(
-        enabled ? Icons.notifications_active : Icons.notifications_off,
-        color: enabled
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.error,
       ),
-      title: const Text('Notifications'),
-      subtitle: Text(
-        enabled
-            ? 'Storm alerts will be delivered'
-            : Platform.isAndroid
-                ? 'Required for storm alerts'
-                : 'Enable in system Settings > StormSense',
-      ),
-      trailing: enabled
-          ? const Icon(Icons.check_circle, color: Colors.green)
-          : FilledButton(
-              onPressed: _requestPermission,
-              child: const Text('Enable'),
+      child: Column(
+        children: [
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  accent.withValues(alpha: 0.3),
+                  Colors.transparent,
+                ],
+              ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    _enabled == true
+                        ? Icons.notifications_active_outlined
+                        : Icons.notifications_off_outlined,
+                    size: 18,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Notifications',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      Text(
+                        _enabled == true
+                            ? 'Storm alerts enabled'
+                            : Platform.isAndroid
+                                ? 'Required for storm alerts'
+                                : 'Enable in Settings > StormSense',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_enabled == null)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (_enabled!)
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF34D399),
+                  )
+                else
+                  FilledButton(
+                    onPressed: _requestPermission,
+                    child: const Text('Enable'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+class _DisconnectCard extends StatelessWidget {
+  const _DisconnectCard({required this.onDisconnect});
 
-  final String title;
+  final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final accent = cs.error;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  accent.withValues(alpha: 0.3),
+                  Colors.transparent,
+                ],
+              ),
             ),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onDisconnect,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(Icons.link_off, size: 18, color: accent),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Disconnect',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: accent,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        Text(
+                          'Return to connection screen',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

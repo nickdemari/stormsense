@@ -24,9 +24,10 @@ final class DashboardLoaded extends DashboardState {
 }
 
 final class DashboardError extends DashboardState {
-  const DashboardError(this.message);
+  const DashboardError(this.message, {this.previousStatus});
   final String message;
+  final StormStatus? previousStatus;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, previousStatus];
 }

@@ -33,7 +33,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       SettingsState(
         tempUnit: TemperatureUnit.values.firstWhere(
           (e) => e.name == tempUnitName,
-          orElse: () => TemperatureUnit.celsius,
+          orElse: () => TemperatureUnit.fahrenheit,
         ),
         pressureUnit: PressureUnit.values.firstWhere(
           (e) => e.name == pressureUnitName,
