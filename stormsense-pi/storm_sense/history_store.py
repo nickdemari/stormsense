@@ -39,9 +39,9 @@ class HistoryStore:
 
     def add_reading(self, reading: dict) -> None:
         """Persist a single sensor reading.  Silently skips if DB is down."""
-        if self._conn is None:
-            return
         with self._lock:
+            if self._conn is None:
+                return
             try:
                 self._conn.execute(
                     '''INSERT INTO readings
@@ -68,9 +68,9 @@ class HistoryStore:
             limit: Maximum number of rows to return.
             since: Only return readings with timestamp > since.
         """
-        if self._conn is None:
-            return []
         with self._lock:
+            if self._conn is None:
+                return []
             try:
                 cursor = self._conn.execute(
                     '''SELECT timestamp, temperature, temperature_f,
@@ -92,9 +92,9 @@ class HistoryStore:
         Uses ``ORDER BY timestamp DESC LIMIT`` then reverses so callers
         receive chronological order without scanning the entire table.
         """
-        if self._conn is None:
-            return []
         with self._lock:
+            if self._conn is None:
+                return []
             try:
                 cursor = self._conn.execute(
                     '''SELECT timestamp, temperature, temperature_f,
@@ -113,9 +113,9 @@ class HistoryStore:
 
     def clear(self) -> None:
         """Delete all stored readings."""
-        if self._conn is None:
-            return
         with self._lock:
+            if self._conn is None:
+                return
             try:
                 self._conn.execute('DELETE FROM readings')
                 self._conn.commit()
@@ -136,9 +136,9 @@ class HistoryStore:
 
     def count(self) -> int:
         """Total number of stored readings."""
-        if self._conn is None:
-            return 0
         with self._lock:
+            if self._conn is None:
+                return 0
             try:
                 cursor = self._conn.execute('SELECT COUNT(*) FROM readings')
                 return cursor.fetchone()[0]
@@ -206,9 +206,9 @@ class HistoryStore:
 
     def _prune(self, max_age_seconds: int) -> int:
         """Actually delete old rows."""
-        if self._conn is None:
-            return 0
         with self._lock:
+            if self._conn is None:
+                return 0
             try:
                 cutoff = time.time() - max_age_seconds
                 cursor = self._conn.execute(

@@ -143,8 +143,14 @@ class StormSenseApp:
             if self._sensor_thread is not None:
                 self._sensor_thread.join(timeout=SAMPLE_INTERVAL_S + 2)
                 if self._sensor_thread.is_alive():
-                    logger.warning('Sensor thread did not exit in time')
-            self._sensor.close()
+                    logger.warning(
+                        'Sensor thread did not exit in time; '
+                        'skipping store close to avoid race'
+                    )
+                else:
+                    self._sensor.close()
+            else:
+                self._sensor.close()
             self._hat.clear_all()
             logger.info('StormSense shutdown complete')
 

@@ -44,13 +44,7 @@ class _HistoryPageState extends State<HistoryPage> {
     final latest = readings.last.timestamp;
     final cutoff = latest - _selectedRange.duration.inSeconds;
     final filtered = readings.where((r) => r.timestamp >= cutoff).toList();
-    final result = filtered.length >= 2 ? filtered : readings;
-    debugPrint(
-      '[History] filter: range=${_selectedRange.label}, '
-      'total=${readings.length}, cutoff=$cutoff, '
-      'filtered=${filtered.length}, returned=${result.length}',
-    );
-    return result;
+    return filtered.length >= 2 ? filtered : readings;
   }
 
   @override
@@ -181,30 +175,6 @@ class _HistoryPageState extends State<HistoryPage> {
                   letterSpacing: -0.5,
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.file_download_outlined, size: 20),
-                onPressed: () {},
-                tooltip: 'Export',
-                style: IconButton.styleFrom(
-                  backgroundColor: cs.surfaceContainer,
-                  side: BorderSide(
-                    color: cs.outlineVariant.withValues(alpha:0.2),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.calendar_today_outlined, size: 20),
-                onPressed: () {},
-                tooltip: 'Calendar',
-                style: IconButton.styleFrom(
-                  backgroundColor: cs.surfaceContainer,
-                  side: BorderSide(
-                    color: cs.outlineVariant.withValues(alpha:0.2),
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -212,10 +182,7 @@ class _HistoryPageState extends State<HistoryPage> {
           // Time range selector
           _TimeRangeSelector(
             selected: _selectedRange,
-            onChanged: (range) {
-              debugPrint('[History] range selected: ${range.label} (${range.description})');
-              setState(() => _selectedRange = range);
-            },
+            onChanged: (range) => setState(() => _selectedRange = range),
           ),
           const SizedBox(height: 16),
 

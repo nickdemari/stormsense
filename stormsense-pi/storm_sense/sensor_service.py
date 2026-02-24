@@ -101,7 +101,9 @@ class SensorService:
         the capped in-memory session log otherwise.
         """
         if self._store.is_available:
-            return self._store.get_history(limit=5000, since=since)
+            if since > 0:
+                return self._store.get_history(limit=5000, since=since)
+            return self._store.get_latest(limit=5000)
         if since > 0:
             return [r for r in self._session_log if r['timestamp'] > since]
         return list(self._session_log)

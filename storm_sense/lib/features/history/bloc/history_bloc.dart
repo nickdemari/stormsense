@@ -5,6 +5,9 @@ import 'package:storm_sense/core/api/storm_sense_api.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/features/history/bloc/history_state.dart';
 
+/// Max readings held in memory — matches server-side limit.
+const _kMaxReadings = 5000;
+
 class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   HistoryBloc() : super(const HistoryInitial()) {
     on<HistoryStarted>(_onStarted);
@@ -42,7 +45,10 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       final lastTs = current.readings.last.timestamp.toDouble();
       final newReadings = await _api!.getHistory(since: lastTs);
       if (newReadings.isEmpty) return;
-      final merged = [...current.readings, ...newReadings];
+      var merged = [...current.readings, ...newReadings];
+      if (merged.length > _kMaxReadings) {
+        merged = merged.sublist(merged.length - _kMaxReadings);
+      }
       emit(HistoryLoaded(readings: merged));
     } catch (e) {
       emit(HistoryError(
