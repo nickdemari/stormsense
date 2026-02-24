@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
@@ -25,6 +26,7 @@ class HistoryStore:
     def __init__(self, db_path: str = DEFAULT_DB_PATH) -> None:
         self._db_path = db_path
         self._conn: sqlite3.Connection | None = None
+        self._lock = threading.Lock()
         self._last_prune: float = 0.0
         self._open()
 
@@ -39,24 +41,25 @@ class HistoryStore:
         """Persist a single sensor reading.  Silently skips if DB is down."""
         if self._conn is None:
             return
-        try:
-            self._conn.execute(
-                '''INSERT INTO readings
-                   (timestamp, temperature, temperature_f,
-                    raw_temperature, pressure, storm_level)
-                   VALUES (?, ?, ?, ?, ?, ?)''',
-                (
-                    reading['timestamp'],
-                    reading['temperature'],
-                    reading['temperature_f'],
-                    reading['raw_temperature'],
-                    reading['pressure'],
-                    reading['storm_level'],
-                ),
-            )
-            self._conn.commit()
-        except sqlite3.Error:
-            logger.exception('Failed to write reading to SQLite')
+        with self._lock:
+            try:
+                self._conn.execute(
+                    '''INSERT INTO readings
+                       (timestamp, temperature, temperature_f,
+                        raw_temperature, pressure, storm_level)
+                       VALUES (?, ?, ?, ?, ?, ?)''',
+                    (
+                        reading['timestamp'],
+                        reading['temperature'],
+                        reading['temperature_f'],
+                        reading['raw_temperature'],
+                        reading['pressure'],
+                        reading['storm_level'],
+                    ),
+                )
+                self._conn.commit()
+            except sqlite3.Error:
+                logger.exception('Failed to write reading to SQLite')
 
     def get_history(self, limit: int = 1000, since: float = 0) -> list[dict]:
         """Return readings ordered by timestamp ascending.
@@ -67,20 +70,58 @@ class HistoryStore:
         """
         if self._conn is None:
             return []
-        try:
-            cursor = self._conn.execute(
-                '''SELECT timestamp, temperature, temperature_f,
-                          raw_temperature, pressure, storm_level
-                   FROM readings
-                   WHERE timestamp > ?
-                   ORDER BY timestamp ASC
-                   LIMIT ?''',
-                (since, limit),
-            )
-            return [dict(row) for row in cursor.fetchall()]
-        except sqlite3.Error:
-            logger.exception('Failed to read history from SQLite')
+        with self._lock:
+            try:
+                cursor = self._conn.execute(
+                    '''SELECT timestamp, temperature, temperature_f,
+                              raw_temperature, pressure, storm_level
+                       FROM readings
+                       WHERE timestamp > ?
+                       ORDER BY timestamp ASC
+                       LIMIT ?''',
+                    (since, limit),
+                )
+                return [dict(row) for row in cursor.fetchall()]
+            except sqlite3.Error:
+                logger.exception('Failed to read history from SQLite')
+                return []
+
+    def get_latest(self, limit: int = 1000) -> list[dict]:
+        """Return the *newest* readings, ordered by timestamp ascending.
+
+        Uses ``ORDER BY timestamp DESC LIMIT`` then reverses so callers
+        receive chronological order without scanning the entire table.
+        """
+        if self._conn is None:
             return []
+        with self._lock:
+            try:
+                cursor = self._conn.execute(
+                    '''SELECT timestamp, temperature, temperature_f,
+                              raw_temperature, pressure, storm_level
+                       FROM readings
+                       ORDER BY timestamp DESC
+                       LIMIT ?''',
+                    (limit,),
+                )
+                rows = [dict(row) for row in cursor.fetchall()]
+                rows.reverse()
+                return rows
+            except sqlite3.Error:
+                logger.exception('Failed to read latest history from SQLite')
+                return []
+
+    def clear(self) -> None:
+        """Delete all stored readings."""
+        if self._conn is None:
+            return
+        with self._lock:
+            try:
+                self._conn.execute('DELETE FROM readings')
+                self._conn.commit()
+                logger.info('Cleared all readings from SQLite')
+            except sqlite3.Error:
+                logger.exception('Failed to clear readings from SQLite')
 
     def prune_if_due(self, max_age_seconds: int = PRUNE_MAX_AGE_S) -> int:
         """Delete old readings, but only if an hour has elapsed since last prune.
@@ -97,22 +138,24 @@ class HistoryStore:
         """Total number of stored readings."""
         if self._conn is None:
             return 0
-        try:
-            cursor = self._conn.execute('SELECT COUNT(*) FROM readings')
-            return cursor.fetchone()[0]
-        except sqlite3.Error:
-            logger.exception('Failed to count readings in SQLite')
-            return 0
+        with self._lock:
+            try:
+                cursor = self._conn.execute('SELECT COUNT(*) FROM readings')
+                return cursor.fetchone()[0]
+            except sqlite3.Error:
+                logger.exception('Failed to count readings in SQLite')
+                return 0
 
     def close(self) -> None:
         """Close the database connection."""
-        if self._conn is not None:
-            try:
-                self._conn.close()
-            except sqlite3.Error:
-                logger.exception('Error closing SQLite connection')
-            finally:
-                self._conn = None
+        with self._lock:
+            if self._conn is not None:
+                try:
+                    self._conn.close()
+                except sqlite3.Error:
+                    logger.exception('Error closing SQLite connection')
+                finally:
+                    self._conn = None
 
     # ── Private helpers ─────────────────────────────────────────
 
@@ -122,7 +165,9 @@ class HistoryStore:
         try:
             # Ensure parent directory exists
             Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
-            self._conn = sqlite3.connect(self._db_path)
+            self._conn = sqlite3.connect(
+                self._db_path, check_same_thread=False,
+            )
             self._conn.row_factory = sqlite3.Row
             self._create_table()
             logger.info(
@@ -163,16 +208,17 @@ class HistoryStore:
         """Actually delete old rows."""
         if self._conn is None:
             return 0
-        try:
-            cutoff = time.time() - max_age_seconds
-            cursor = self._conn.execute(
-                'DELETE FROM readings WHERE timestamp < ?', (cutoff,),
-            )
-            self._conn.commit()
-            deleted = cursor.rowcount
-            if deleted > 0:
-                logger.info('Pruned %d readings older than %d seconds', deleted, max_age_seconds)
-            return deleted
-        except sqlite3.Error:
-            logger.exception('Failed to prune old readings')
-            return 0
+        with self._lock:
+            try:
+                cutoff = time.time() - max_age_seconds
+                cursor = self._conn.execute(
+                    'DELETE FROM readings WHERE timestamp < ?', (cutoff,),
+                )
+                self._conn.commit()
+                deleted = cursor.rowcount
+                if deleted > 0:
+                    logger.info('Pruned %d readings older than %d seconds', deleted, max_age_seconds)
+                return deleted
+            except sqlite3.Error:
+                logger.exception('Failed to prune old readings')
+                return 0

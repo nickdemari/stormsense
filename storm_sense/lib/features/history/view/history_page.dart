@@ -44,7 +44,13 @@ class _HistoryPageState extends State<HistoryPage> {
     final latest = readings.last.timestamp;
     final cutoff = latest - _selectedRange.duration.inSeconds;
     final filtered = readings.where((r) => r.timestamp >= cutoff).toList();
-    return filtered.length >= 2 ? filtered : readings;
+    final result = filtered.length >= 2 ? filtered : readings;
+    debugPrint(
+      '[History] filter: range=${_selectedRange.label}, '
+      'total=${readings.length}, cutoff=$cutoff, '
+      'filtered=${filtered.length}, returned=${result.length}',
+    );
+    return result;
   }
 
   @override
@@ -206,7 +212,10 @@ class _HistoryPageState extends State<HistoryPage> {
           // Time range selector
           _TimeRangeSelector(
             selected: _selectedRange,
-            onChanged: (range) => setState(() => _selectedRange = range),
+            onChanged: (range) {
+              debugPrint('[History] range selected: ${range.label} (${range.description})');
+              setState(() => _selectedRange = range);
+            },
           ),
           const SizedBox(height: 16),
 

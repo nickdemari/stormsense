@@ -31,6 +31,7 @@ class StormSenseApp:
         self._hat = HATInterface()
         self._api = ApiServer(self._sensor)
         self._shutdown_event = threading.Event()
+        self._sensor_thread: threading.Thread | None = None
         self._previous_storm_level = StormLevel.FAIR
 
         self._wire_buttons()
@@ -126,10 +127,10 @@ class StormSenseApp:
             self._hat.show_text('ERR ')
 
         # Start sensor loop in background
-        sensor_thread = threading.Thread(
-            target=self._sensor_loop, daemon=True
+        self._sensor_thread = threading.Thread(
+            target=self._sensor_loop, daemon=True,
         )
-        sensor_thread.start()
+        self._sensor_thread.start()
 
         # Run Flask in main thread
         logger.info('API server starting on %s:%d', API_HOST, API_PORT)
@@ -139,6 +140,10 @@ class StormSenseApp:
             logger.exception('API server error')
         finally:
             self._shutdown_event.set()
+            if self._sensor_thread is not None:
+                self._sensor_thread.join(timeout=SAMPLE_INTERVAL_S + 2)
+                if self._sensor_thread.is_alive():
+                    logger.warning('Sensor thread did not exit in time')
             self._sensor.close()
             self._hat.clear_all()
             logger.info('StormSense shutdown complete')

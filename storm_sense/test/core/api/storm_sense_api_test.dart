@@ -60,7 +60,10 @@ void main() {
         },
       ];
 
-      when(() => mockDio.get<List<dynamic>>('/api/history')).thenAnswer(
+      when(() => mockDio.get<List<dynamic>>(
+        '/api/history',
+        queryParameters: any(named: 'queryParameters'),
+      )).thenAnswer(
         (_) async => Response<List<dynamic>>(
           data: data,
           statusCode: 200,

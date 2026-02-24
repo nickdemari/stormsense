@@ -95,24 +95,22 @@ class SensorService:
         }
 
     def get_history(self, since: float = 0) -> list[dict]:
-        """Return session log matching the /api/history contract.
+        """Return readings matching the /api/history contract.
 
-        If *since* is provided, returns only readings with timestamp > since.
-        When the store has data beyond the in-memory window, it queries SQLite
-        directly; otherwise it filters the in-memory session log.
+        Queries SQLite when available (full multi-day history); falls back to
+        the capped in-memory session log otherwise.
         """
+        if self._store.is_available:
+            return self._store.get_history(limit=5000, since=since)
         if since > 0:
-            # Use SQLite for filtered queries — it has the full history
-            if self._store.is_available:
-                return self._store.get_history(limit=5000, since=since)
-            # Fallback: filter in-memory
             return [r for r in self._session_log if r['timestamp'] > since]
         return list(self._session_log)
 
     def reset_history(self) -> None:
-        """Clear all history and reset storm state."""
+        """Clear all history (in-memory and persisted) and reset storm state."""
         self._pressure_history.clear()
         self._session_log.clear()
+        self._store.clear()
         self.storm_level = StormLevel.FAIR
         self.pressure_delta_3h = None
 
@@ -128,7 +126,7 @@ class SensorService:
             return
 
         # Seed session log (most recent SESSION_LOG_MAX readings)
-        rows = self._store.get_history(limit=SESSION_LOG_MAX)
+        rows = self._store.get_latest(limit=SESSION_LOG_MAX)
         for row in rows:
             self._session_log.append(row)
 

@@ -61,7 +61,7 @@ class PressureChart extends StatelessWidget {
       ];
       timestamps = [for (final r in readings) r.timestamp.toDouble()];
     } else {
-      final step = smoothed.length / _maxPoints;
+      final step = (smoothed.length - 1) / (_maxPoints - 1);
       spots = [];
       timestamps = [];
       for (var i = 0; i < _maxPoints; i++) {

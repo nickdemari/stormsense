@@ -110,6 +110,8 @@ class DashboardPage extends StatelessWidget {
     StormStatus status, {
     bool isStale = false,
   }) {
+    final cs = theme.colorScheme;
+
     return RefreshIndicator(
       onRefresh: () async {
         context.read<DashboardBloc>().add(const DashboardRefreshed());
@@ -124,6 +126,47 @@ class DashboardPage extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
+          if (isStale) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: cs.errorContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_off, size: 16, color: cs.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Offline — showing last known data',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.error,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context
+                        .read<DashboardBloc>()
+                        .add(const DashboardRefreshed()),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Retry',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           StormAlertCard(stormLevel: status.stormLevel),
           const SizedBox(height: 12),

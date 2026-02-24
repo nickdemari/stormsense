@@ -17,6 +17,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   StormSenseApi? _api;
   Timer? _pollTimer;
 
+  /// Full fetch — replaces all readings.
   Future<void> _fetchHistory(Emitter<HistoryState> emit) async {
     try {
       final readings = await _api!.getHistory();
@@ -27,6 +28,26 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       emit(HistoryError(
         'Failed to load history: ${e.toString()}',
         previousReadings: previousReadings,
+      ));
+    }
+  }
+
+  /// Incremental fetch — appends only new readings since the last timestamp.
+  Future<void> _fetchIncremental(Emitter<HistoryState> emit) async {
+    final current = state;
+    if (current is! HistoryLoaded || current.readings.isEmpty) {
+      return _fetchHistory(emit);
+    }
+    try {
+      final lastTs = current.readings.last.timestamp.toDouble();
+      final newReadings = await _api!.getHistory(since: lastTs);
+      if (newReadings.isEmpty) return;
+      final merged = [...current.readings, ...newReadings];
+      emit(HistoryLoaded(readings: merged));
+    } catch (e) {
+      emit(HistoryError(
+        'Failed to load history: ${e.toString()}',
+        previousReadings: current.readings,
       ));
     }
   }
@@ -80,7 +101,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     Emitter<HistoryState> emit,
   ) async {
     if (_api == null) return;
-    await _fetchHistory(emit);
+    await _fetchIncremental(emit);
   }
 
   @override
