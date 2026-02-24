@@ -29,7 +29,7 @@ def _make_mock_sensor() -> MagicMock:
         'pressure': 1013.25,
         'storm_level': 0,
     }]
-    mock._samples_collected = 42
+    mock._pressure_history = [None] * 42  # len() == 42 for health endpoint
     return mock
 
 
@@ -95,7 +95,17 @@ class TestHistoryEndpoint(unittest.TestCase):
 
     def test_history_calls_sensor_get_history(self):
         self.client.get('/api/history')
-        self.mock_sensor.get_history.assert_called_once()
+        self.mock_sensor.get_history.assert_called_once_with(since=0)
+
+    def test_history_since_query_param(self):
+        resp = self.client.get('/api/history?since=1708635500.0')
+        self.assertEqual(resp.status_code, 200)
+        self.mock_sensor.get_history.assert_called_once_with(since=1708635500.0)
+
+    def test_history_since_invalid_falls_back_to_zero(self):
+        resp = self.client.get('/api/history?since=notanumber')
+        self.assertEqual(resp.status_code, 200)
+        self.mock_sensor.get_history.assert_called_once_with(since=0)
 
 
 class TestHealthEndpoint(unittest.TestCase):

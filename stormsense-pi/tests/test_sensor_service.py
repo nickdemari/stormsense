@@ -19,13 +19,13 @@ def _make_service_with_mock_rh(
     temperature: float = 25.0,
     pressure: float = 1013.25,
 ) -> tuple[SensorService, MagicMock]:
-    """Create a SensorService with a mocked rainbowhat module."""
+    """Create a SensorService with a mocked rainbowhat module and in-memory DB."""
     mock_rh = MagicMock()
     mock_rh.weather.temperature.return_value = temperature
     mock_rh.weather.pressure.return_value = pressure
 
     with patch('storm_sense.sensor_service.rh', mock_rh):
-        svc = SensorService()
+        svc = SensorService(db_path=':memory:')
     return svc, mock_rh
 
 
