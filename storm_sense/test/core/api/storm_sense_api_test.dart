@@ -19,6 +19,7 @@ void main() {
     test('returns parsed StormStatus on 200', () async {
       final data = <String, dynamic>{
         'temperature': 23.45,
+        'temperature_f': 74.21,
         'raw_temperature': 28.12,
         'pressure': 1013.25,
         'storm_level': 0,
@@ -52,6 +53,7 @@ void main() {
         <String, dynamic>{
           'timestamp': 1708635600.0,
           'temperature': 23.45,
+          'temperature_f': 74.21,
           'raw_temperature': 28.12,
           'pressure': 1013.25,
           'storm_level': 0,

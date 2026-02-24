@@ -9,7 +9,7 @@ void main() {
   group('SettingsState', () {
     test('initial state has correct defaults', () {
       const state = SettingsState();
-      expect(state.tempUnit, TemperatureUnit.celsius);
+      expect(state.tempUnit, TemperatureUnit.fahrenheit);
       expect(state.pressureUnit, PressureUnit.hpa);
       expect(state.pollIntervalSeconds, 5);
     });
@@ -82,7 +82,7 @@ void main() {
     });
 
     blocTest<SettingsBloc, SettingsState>(
-      'SettingsLoaded emits defaults when prefs are empty',
+      'SettingsLoaded with empty prefs emits default state',
       setUp: () async {
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
@@ -93,19 +93,19 @@ void main() {
     );
 
     blocTest<SettingsBloc, SettingsState>(
-      'TemperatureUnitChanged emits state with fahrenheit',
+      'TemperatureUnitChanged emits state with celsius',
       setUp: () async {
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
       },
       build: () => SettingsBloc(prefs: prefs),
       act: (bloc) =>
-          bloc.add(const TemperatureUnitChanged(TemperatureUnit.fahrenheit)),
+          bloc.add(const TemperatureUnitChanged(TemperatureUnit.celsius)),
       expect: () => [
-        const SettingsState(tempUnit: TemperatureUnit.fahrenheit),
+        const SettingsState(tempUnit: TemperatureUnit.celsius),
       ],
       verify: (_) {
-        expect(prefs.getString('temp_unit'), 'fahrenheit');
+        expect(prefs.getString('temp_unit'), 'celsius');
       },
     );
 

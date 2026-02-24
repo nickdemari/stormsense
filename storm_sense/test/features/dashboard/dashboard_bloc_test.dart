@@ -16,6 +16,7 @@ void main() {
   group('DashboardBloc', () {
     final sampleStatus = StormStatus(
       temperature: 23.45,
+      temperatureF: 74.21,
       rawTemperature: 28.12,
       pressure: 1013.25,
       stormLevel: 0,
