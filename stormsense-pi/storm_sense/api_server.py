@@ -1,6 +1,8 @@
 """ApiServer — Flask REST API for StormSense Pi weather station."""
 
-from flask import Flask, jsonify
+from __future__ import annotations
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from storm_sense.config import API_HOST, API_PORT
@@ -37,7 +39,8 @@ class ApiServer:
 
         @self._app.route('/api/history')
         def api_history():
-            return jsonify(self._sensor_service.get_history())
+            since = request.args.get('since', 0, type=float)
+            return jsonify(self._sensor_service.get_history(since=since))
 
         @self._app.route('/api/health')
         def api_health():
