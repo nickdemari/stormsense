@@ -9,41 +9,77 @@ class StormAlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = StormLevel.fromInt(stormLevel);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return Card(
-      color: level.color.withValues(alpha: 0.15),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Icon(
-              _iconForLevel(level),
-              color: level.color,
-              size: 40,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    level.label,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: level.color,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _descriptionForLevel(level),
-                    style: const TextStyle(fontSize: 14),
-                  ),
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Top glow in storm color
+          Container(
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  level.color.withValues(alpha: 0.8),
+                  Colors.transparent,
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: level.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    _iconForLevel(level),
+                    color: level.color,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        level.label,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: level.color,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _descriptionForLevel(level),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
