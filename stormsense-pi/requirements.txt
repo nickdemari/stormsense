@@ -1,3 +1,4 @@
 rainbowhat
 flask
 flask-cors
+flask-limiter

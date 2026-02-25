@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from storm_sense.config import API_HOST, API_PORT
 from storm_sense.sensor_service import SensorService
@@ -16,6 +18,11 @@ class ApiServer:
         self._sensor_service = sensor_service
         self._app = Flask(__name__)
         CORS(self._app)
+        self._limiter = Limiter(
+            app=self._app,
+            key_func=get_remote_address,
+            default_limits=["60 per minute"],
+        )
         self._register_routes()
 
     # ── Public API ──────────────────────────────────────────────
@@ -34,15 +41,18 @@ class ApiServer:
         """Wire up all API endpoints."""
 
         @self._app.route('/api/status')
+        @self._limiter.limit("30 per minute")
         def api_status():
             return jsonify(self._sensor_service.get_status())
 
         @self._app.route('/api/history')
+        @self._limiter.limit("30 per minute")
         def api_history():
             since = request.args.get('since', 0, type=float)
             return jsonify(self._sensor_service.get_history(since=since))
 
         @self._app.route('/api/health')
+        @self._limiter.limit("10 per minute")
         def api_health():
             return jsonify({
                 'status': 'ok',
