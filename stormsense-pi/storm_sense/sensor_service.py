@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 CPU_TEMP_PATH = '/sys/class/thermal/thermal_zone0/temp'
 CPU_TEMP_FALLBACK = 45.0
 
+CPU_TEMP_EMA_ALPHA = 0.1
+TEMP_EMA_ALPHA = 0.3
+
 
 class SensorService:
     """Reads BMP280 via Rainbow HAT, calibrates temperature, detects storms."""
@@ -47,6 +50,9 @@ class SensorService:
         )
         self._session_log: deque[dict] = deque(maxlen=SESSION_LOG_MAX)
 
+        self._cpu_temp_ema: float | None = None
+        self._temp_ema: float | None = None
+
         # SQLite persistence — survives restarts
         self._store = HistoryStore(db_path)
         self._seed_from_store()
@@ -59,8 +65,20 @@ class SensorService:
 
         self.raw_temperature = rh.weather.temperature()
         cpu_temp = self._read_cpu_temp()
-        self.temperature = self.raw_temperature - (cpu_temp - self.raw_temperature) / CPU_HEAT_FACTOR
 
+        if self._cpu_temp_ema is None:
+            self._cpu_temp_ema = cpu_temp
+        else:
+            self._cpu_temp_ema += CPU_TEMP_EMA_ALPHA * (cpu_temp - self._cpu_temp_ema)
+
+        calibrated = self.raw_temperature - (self._cpu_temp_ema - self.raw_temperature) / CPU_HEAT_FACTOR
+
+        if self._temp_ema is None:
+            self._temp_ema = calibrated
+        else:
+            self._temp_ema += TEMP_EMA_ALPHA * (calibrated - self._temp_ema)
+
+        self.temperature = self._temp_ema
         self.pressure = rh.weather.pressure()
         self.temperature_f = self.temperature * 9.0 / 5.0 + 32.0
 
@@ -115,6 +133,8 @@ class SensorService:
         self._store.clear()
         self.storm_level = StormLevel.FAIR
         self.pressure_delta_3h = None
+        self._cpu_temp_ema = None
+        self._temp_ema = None
 
     def close(self) -> None:
         """Shut down the history store cleanly."""
@@ -145,6 +165,7 @@ class SensorService:
             self.raw_temperature = latest['raw_temperature']
             self.pressure = latest['pressure']
             self.storm_level = StormLevel(latest['storm_level'])
+            self._temp_ema = self.temperature
             self._update_storm_level()
 
             logger.info(

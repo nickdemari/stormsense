@@ -72,6 +72,50 @@ class TestTemperatureCalibration(unittest.TestCase):
         self.assertAlmostEqual(svc.temperature, 30.0)
 
 
+class TestTemperatureSmoothing(unittest.TestCase):
+    """EMA smoothing rejects CPU thermal noise from calibrated output."""
+
+    def test_cpu_spike_is_dampened(self):
+        """A sudden 15°C CPU spike should cause <10% of the unsmoothed impact."""
+        svc, mock_rh = _make_service_with_mock_rh(temperature=28.0)
+
+        with patch('storm_sense.sensor_service.rh', mock_rh), \
+             patch('storm_sense.sensor_service.SensorService._read_cpu_temp') as mock_cpu:
+            # Let EMA converge at cpu=45
+            mock_cpu.return_value = 45.0
+            for _ in range(20):
+                svc.read()
+            stable_temp = svc.temperature
+
+            # Spike CPU to 60 (+15°C)
+            mock_cpu.return_value = 60.0
+            svc.read()
+            spiked_temp = svc.temperature
+
+        # Without smoothing: 15/1.2 ≈ 12.5°C drop.
+        # With double EMA: drop should be a small fraction of that.
+        unsmoothed_drop = 15.0 / 1.2
+        actual_drop = stable_temp - spiked_temp
+        self.assertLess(
+            actual_drop, unsmoothed_drop * 0.10,
+            f'CPU spike dampening insufficient: {actual_drop:.2f}°C '
+            f'vs unsmoothed {unsmoothed_drop:.2f}°C',
+        )
+
+    def test_ema_resets_with_history(self):
+        """reset_history() clears EMA state so next read starts fresh."""
+        svc, mock_rh = _make_service_with_mock_rh(temperature=28.0)
+
+        with patch('storm_sense.sensor_service.rh', mock_rh), \
+             patch('storm_sense.sensor_service.SensorService._read_cpu_temp', return_value=45.0):
+            for _ in range(5):
+                svc.read()
+
+        svc.reset_history()
+        self.assertIsNone(svc._cpu_temp_ema)
+        self.assertIsNone(svc._temp_ema)
+
+
 class TestStormDetection(unittest.TestCase):
     """Storm detection based on pressure delta over rolling window."""
 
