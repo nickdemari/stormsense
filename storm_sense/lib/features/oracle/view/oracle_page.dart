@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:storm_sense/core/astro/aspects.dart';
 import 'package:storm_sense/features/oracle/bloc/oracle_bloc.dart';
+import 'package:storm_sense/features/oracle/view/birth_chart_sheet.dart';
 import 'package:storm_sense/features/oracle/view/cosmic_weather_card.dart';
 import 'package:storm_sense/features/oracle/view/planetary_grid.dart';
 
@@ -177,72 +178,75 @@ class _BirthChartCTA extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = theme.colorScheme;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                Colors.transparent,
-                _color.withValues(alpha: 0.3),
-                Colors.transparent,
-              ]),
+    return GestureDetector(
+      onTap: () => BirthChartSheet.show(context),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  Colors.transparent,
+                  _color.withValues(alpha: 0.3),
+                  Colors.transparent,
+                ]),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(9),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: _color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      size: 18,
+                      color: _color,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    size: 18,
-                    color: _color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Personalize your readings',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: cs.onSurface,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Personalize your readings',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: cs.onSurface,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Add your birth info for custom insights',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        Text(
+                          'Add your birth info for custom insights',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-                ),
-              ],
+                  Icon(
+                    Icons.chevron_right,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
