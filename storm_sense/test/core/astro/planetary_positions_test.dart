@@ -66,6 +66,7 @@ void main() {
             'Mars',
             'Jupiter',
             'Saturn',
+            'Rahu',
           ]),
         );
       });
