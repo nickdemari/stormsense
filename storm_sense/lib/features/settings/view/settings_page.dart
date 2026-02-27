@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
+import 'package:storm_sense/features/oracle/bloc/oracle_bloc.dart';
 import 'package:storm_sense/notifications/storm_notification_service.dart';
 
 import '../bloc/settings_bloc.dart';
@@ -126,6 +127,9 @@ class SettingsPage extends StatelessWidget {
                     context
                         .read<HistoryBloc>()
                         .add(const HistoryStopped());
+                    context
+                        .read<OracleBloc>()
+                        .add(const OracleStopped());
                     context.go('/connect');
                   },
                 ),

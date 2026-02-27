@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:storm_sense/core/astro/oracle_engine.dart';
 import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
 import 'package:storm_sense/features/oracle/bloc/oracle_bloc.dart';
@@ -25,6 +26,7 @@ void main() {
   late MockDashboardBloc mockDashboard;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     mockDashboard = MockDashboardBloc();
   });
 
@@ -43,6 +45,7 @@ void main() {
       'OracleStarted with no dashboard data emits OracleLoading',
       build: () => OracleBloc(dashboardBloc: mockDashboard),
       act: (bloc) => bloc.add(const OracleStarted()),
+      wait: const Duration(milliseconds: 300),
       expect: () => [const OracleLoading()],
     );
 

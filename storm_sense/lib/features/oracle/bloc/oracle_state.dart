@@ -20,7 +20,12 @@ final class OracleLoaded extends OracleState {
   final OracleReading reading;
 
   @override
-  List<Object?> get props => [reading.timestamp, reading.elementalHarmony];
+  List<Object?> get props => [
+        reading.timestamp,
+        reading.elementalHarmony,
+        reading.dominantElement,
+        reading.cosmicWeatherSummary,
+      ];
 }
 
 final class OracleError extends OracleState {

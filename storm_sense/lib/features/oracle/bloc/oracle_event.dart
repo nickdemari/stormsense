@@ -26,6 +26,10 @@ final class OracleRefreshed extends OracleEvent {
   const OracleRefreshed();
 }
 
+final class OracleBirthDataChanged extends OracleEvent {
+  const OracleBirthDataChanged();
+}
+
 final class OracleStopped extends OracleEvent {
   const OracleStopped();
 }

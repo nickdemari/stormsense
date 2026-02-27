@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:storm_sense/core/astro/planetary_positions.dart';
+import 'package:storm_sense/core/astro/zodiac.dart';
 
 class PlanetaryGrid extends StatelessWidget {
   const PlanetaryGrid({super.key, required this.planets});
@@ -138,10 +139,29 @@ class PlanetaryGrid extends StatelessWidget {
               ],
             ),
           ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.asset(
+              _zodiacAsset(planet.sign),
+              width: 24,
+              height: 24,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Text(
+                planet.sign.glyph,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+
+  String _zodiacAsset(ZodiacSign sign) =>
+      'assets/oracle/zodiac_${sign.name}.png';
 
   String _planetGlyph(String name) {
     return switch (name) {

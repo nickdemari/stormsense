@@ -44,14 +44,19 @@ class CosmicWeatherCard extends StatelessWidget {
                     Container(
                       width: 40,
                       height: 40,
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: _color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        _elementIcon(reading.dominantElement),
-                        color: _color,
-                        size: 22,
+                      child: Image.asset(
+                        _elementAsset(reading.dominantElement),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          _elementIcon(reading.dominantElement),
+                          color: _color,
+                          size: 22,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -109,6 +114,16 @@ class CosmicWeatherCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _elementAsset(String element) {
+    return switch (element) {
+      'Fire' => 'assets/oracle/element_fire.png',
+      'Water' => 'assets/oracle/element_water.png',
+      'Air' => 'assets/oracle/element_air.png',
+      'Earth' => 'assets/oracle/element_earth.png',
+      _ => 'assets/oracle/element_fire.png',
+    };
   }
 
   IconData _elementIcon(String element) {

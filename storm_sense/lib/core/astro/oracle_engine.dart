@@ -1,6 +1,45 @@
 import 'package:storm_sense/core/astro/aspects.dart';
+import 'package:storm_sense/core/astro/birth_chart.dart';
 import 'package:storm_sense/core/astro/planetary_positions.dart';
 import 'package:storm_sense/core/astro/zodiac.dart';
+
+/// Structured personal transit data derived from birth chart + current sky.
+class PersonalTransit {
+  const PersonalTransit({
+    required this.natalSun,
+    required this.natalMoon,
+    required this.natalElementCounts,
+    required this.weatherResonanceCount,
+    required this.natalTotal,
+    required this.weatherElement,
+    required this.transitAspects,
+    required this.natalPositions,
+  });
+
+  /// Natal Sun position.
+  final CelestialPosition natalSun;
+
+  /// Natal Moon position.
+  final CelestialPosition natalMoon;
+
+  /// Element distribution across natal placements.
+  final Map<AstroElement, int> natalElementCounts;
+
+  /// How many natal placements share today's weather element.
+  final int weatherResonanceCount;
+
+  /// Total number of natal bodies.
+  final int natalTotal;
+
+  /// Today's weather-derived element.
+  final AstroElement weatherElement;
+
+  /// Transit-to-natal aspects, sorted by tightest orb.
+  final List<Aspect> transitAspects;
+
+  /// All natal positions for detailed display.
+  final List<CelestialPosition> natalPositions;
+}
 
 /// A complete oracle reading combining weather data with planetary positions.
 class OracleReading {
@@ -12,6 +51,8 @@ class OracleReading {
     required this.planets,
     required this.aspects,
     this.weatherElement,
+    this.personalTransit,
+    this.birthData,
   });
 
   /// When the reading was generated.
@@ -35,12 +76,19 @@ class OracleReading {
 
   /// The weather-derived element, if available.
   final AstroElement? weatherElement;
+
+  /// Structured personal transit data, if birth data present.
+  final PersonalTransit? personalTransit;
+
+  /// The birth data used for this reading, if any.
+  final BirthData? birthData;
 }
 
 /// Maps current weather conditions to an astrological element.
 ///
 /// Storm levels 3-4 (rain/stormy) map to Water.
-/// Level 0 (dry) maps to Fire.
+/// Level 0 (dry) with high temp (>85F) maps to Fire.
+/// Level 0 (dry) with normal temp maps to Earth.
 /// Level 2 (change) maps to Air.
 /// Level 1 (fair) maps to Earth.
 AstroElement weatherElement({
@@ -48,8 +96,9 @@ AstroElement weatherElement({
   required double temperatureF,
 }) {
   if (stormLevel >= 3) return AstroElement.water;
-  if (stormLevel == 0) return AstroElement.fire;
+  if (stormLevel == 0 && temperatureF > 85) return AstroElement.fire;
   if (stormLevel == 2) return AstroElement.air;
+  if (stormLevel == 0) return AstroElement.earth;
   return AstroElement.earth;
 }
 
@@ -77,6 +126,7 @@ class OracleEngine {
     required double pressure,
     required int stormLevel,
     required DateTime dateTime,
+    BirthData? birthData,
   }) {
     final planets = PlanetaryPositions.allPositions(dateTime);
     final weather = weatherElement(
@@ -107,6 +157,15 @@ class OracleEngine {
       aspects: aspects,
     );
 
+    PersonalTransit? personalTransit;
+    if (birthData != null) {
+      personalTransit = _generatePersonalTransit(
+        transitPlanets: planets,
+        birthData: birthData,
+        weather: weather,
+      );
+    }
+
     return OracleReading(
       timestamp: dateTime,
       dominantElement: weather.label,
@@ -115,6 +174,8 @@ class OracleEngine {
       planets: planets,
       aspects: aspects,
       weatherElement: weather,
+      personalTransit: personalTransit,
+      birthData: birthData,
     );
   }
 
@@ -167,5 +228,63 @@ class OracleEngine {
     }
 
     return buffer.toString();
+  }
+
+  /// Builds structured personal transit data by comparing current transiting
+  /// planets against natal chart positions.
+  static PersonalTransit _generatePersonalTransit({
+    required List<CelestialPosition> transitPlanets,
+    required BirthData birthData,
+    required AstroElement weather,
+  }) {
+    final natalPositions = birthData.natalPositions;
+
+    // Find transits aspecting natal positions
+    final natalLongitudes = {
+      for (final p in natalPositions) 'Natal ${p.name}': p.longitude,
+    };
+    final transitLongitudes = {
+      for (final p in transitPlanets) p.name: p.longitude,
+    };
+
+    final transitAspects = <Aspect>[];
+    for (final tEntry in transitLongitudes.entries) {
+      for (final nEntry in natalLongitudes.entries) {
+        final aspect = findAspect(
+          tEntry.value,
+          nEntry.value,
+          body1: tEntry.key,
+          body2: nEntry.key,
+        );
+        if (aspect != null) {
+          transitAspects.add(aspect);
+        }
+      }
+    }
+
+    transitAspects.sort((a, b) => a.orb.compareTo(b.orb));
+
+    final natalSun = natalPositions.firstWhere((p) => p.name == 'Sun');
+    final natalMoon = natalPositions.firstWhere((p) => p.name == 'Moon');
+
+    final natalElementCounts = <AstroElement, int>{};
+    for (final p in natalPositions) {
+      natalElementCounts[p.element] =
+          (natalElementCounts[p.element] ?? 0) + 1;
+    }
+
+    final resonanceCount =
+        natalPositions.where((p) => p.element == weather).length;
+
+    return PersonalTransit(
+      natalSun: natalSun,
+      natalMoon: natalMoon,
+      natalElementCounts: natalElementCounts,
+      weatherResonanceCount: resonanceCount,
+      natalTotal: natalPositions.length,
+      weatherElement: weather,
+      transitAspects: transitAspects,
+      natalPositions: natalPositions,
+    );
   }
 }

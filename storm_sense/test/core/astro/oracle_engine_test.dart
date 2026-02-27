@@ -19,10 +19,17 @@ void main() {
       );
     });
 
-    test('dry level returns fire', () {
+    test('dry level with high temp returns fire', () {
       expect(
         weatherElement(stormLevel: 0, temperatureF: 90),
         AstroElement.fire,
+      );
+    });
+
+    test('dry level with low temp returns earth', () {
+      expect(
+        weatherElement(stormLevel: 0, temperatureF: 70),
+        AstroElement.earth,
       );
     });
 

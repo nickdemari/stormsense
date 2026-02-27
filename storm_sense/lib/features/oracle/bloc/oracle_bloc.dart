@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:storm_sense/core/astro/birth_chart.dart';
 import 'package:storm_sense/core/astro/oracle_engine.dart';
 import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
 
@@ -15,6 +17,7 @@ class OracleBloc extends Bloc<OracleEvent, OracleState> {
     on<OracleStarted>(_onStarted);
     on<OracleWeatherUpdated>(_onWeatherUpdated);
     on<OracleRefreshed>(_onRefreshed);
+    on<OracleBirthDataChanged>(_onBirthDataChanged);
     on<OracleStopped>(_onStopped);
   }
 
@@ -24,9 +27,17 @@ class OracleBloc extends Bloc<OracleEvent, OracleState> {
   double _lastTempF = 72.0;
   double _lastPressure = 1013.25;
   int _lastStormLevel = 1;
+  BirthData? _birthData;
 
-  void _onStarted(OracleStarted event, Emitter<OracleState> emit) {
+  Future<void> _onStarted(
+    OracleStarted event,
+    Emitter<OracleState> emit,
+  ) async {
     emit(const OracleLoading());
+
+    // Load saved birth data
+    final prefs = await SharedPreferences.getInstance();
+    _birthData = await BirthDataStore.load(prefs);
 
     final currentDashState = _dashboardBloc.state;
     if (currentDashState is DashboardLoaded) {
@@ -63,9 +74,19 @@ class OracleBloc extends Bloc<OracleEvent, OracleState> {
     _generateAndEmit(emit);
   }
 
+  Future<void> _onBirthDataChanged(
+    OracleBirthDataChanged event,
+    Emitter<OracleState> emit,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    _birthData = await BirthDataStore.load(prefs);
+    _generateAndEmit(emit);
+  }
+
   void _onStopped(OracleStopped event, Emitter<OracleState> emit) {
     _dashboardSub?.cancel();
     _dashboardSub = null;
+    _birthData = null;
     emit(const OracleInitial());
   }
 
@@ -76,6 +97,7 @@ class OracleBloc extends Bloc<OracleEvent, OracleState> {
         pressure: _lastPressure,
         stormLevel: _lastStormLevel,
         dateTime: DateTime.now(),
+        birthData: _birthData,
       );
       emit(OracleLoaded(reading: reading));
     } catch (e) {
