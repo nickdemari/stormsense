@@ -9,6 +9,7 @@ import 'package:storm_sense/features/connection/bloc/connection_state.dart'
 import 'package:storm_sense/features/dashboard/bloc/dashboard_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
+import 'package:storm_sense/features/oracle/bloc/oracle_bloc.dart';
 import 'package:storm_sense/features/settings/bloc/settings_bloc.dart';
 import 'package:storm_sense/features/settings/bloc/settings_event.dart';
 import 'package:storm_sense/features/settings/bloc/settings_state.dart';
@@ -61,6 +62,11 @@ class _StormSenseAppState extends State<StormSenseApp> {
           BlocProvider(
             create: (_) => HistoryBloc(),
           ),
+          BlocProvider(
+            create: (context) => OracleBloc(
+              dashboardBloc: context.read<DashboardBloc>(),
+            ),
+          ),
         ],
         child: MultiBlocListener(
           listeners: [
@@ -77,6 +83,7 @@ class _StormSenseAppState extends State<StormSenseApp> {
                         state.baseUrl,
                         pollIntervalSeconds: pollInterval,
                       ));
+                  context.read<OracleBloc>().add(const OracleStarted());
                   _router.go('/dashboard');
                 }
               },

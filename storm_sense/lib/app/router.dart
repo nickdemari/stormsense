@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:storm_sense/features/connection/view/connect_page.dart';
 import 'package:storm_sense/features/dashboard/view/dashboard_page.dart';
 import 'package:storm_sense/features/history/view/history_page.dart';
+import 'package:storm_sense/features/oracle/view/oracle_page.dart';
 import 'package:storm_sense/features/settings/view/settings_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -24,6 +25,10 @@ GoRouter createRouter({String initialLocation = '/connect'}) {
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardPage(),
+          ),
+          GoRoute(
+            path: '/oracle',
+            builder: (context, state) => const OraclePage(),
           ),
           GoRoute(
             path: '/history',
@@ -54,8 +59,10 @@ class _AppShell extends StatelessWidget {
             case 0:
               context.go('/dashboard');
             case 1:
-              context.go('/history');
+              context.go('/oracle');
             case 2:
+              context.go('/history');
+            case 3:
               context.go('/settings');
           }
         },
@@ -63,6 +70,10 @@ class _AppShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome),
+            label: 'Oracle',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart),
@@ -78,8 +89,9 @@ class _AppShell extends StatelessWidget {
   }
 
   int _calculateIndex(String path) {
-    if (path.startsWith('/history')) return 1;
-    if (path.startsWith('/settings')) return 2;
+    if (path.startsWith('/oracle')) return 1;
+    if (path.startsWith('/history')) return 2;
+    if (path.startsWith('/settings')) return 3;
     return 0;
   }
 }

@@ -8,6 +8,7 @@ import 'package:storm_sense/features/dashboard/view/pressure_card.dart';
 import 'package:storm_sense/features/dashboard/view/storm_alert_card.dart';
 import 'package:storm_sense/features/history/bloc/history_bloc.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
+import 'package:storm_sense/features/oracle/bloc/oracle_bloc.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -184,6 +185,7 @@ class DashboardPage extends StatelessWidget {
   void _disconnect(BuildContext context) {
     context.read<DashboardBloc>().add(const DashboardStopped());
     context.read<HistoryBloc>().add(const HistoryStopped());
+    context.read<OracleBloc>().add(const OracleStopped());
     context.go('/connect');
   }
 }
