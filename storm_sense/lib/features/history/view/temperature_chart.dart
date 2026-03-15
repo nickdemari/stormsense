@@ -178,7 +178,13 @@ class TemperatureChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               for (final idx in labelIndices)
-                Text(_formatTime(timestamps[idx]), style: labelStyle),
+                Text(
+                  _formatTime(
+                    timestamps[idx],
+                    timestamps.last - timestamps.first,
+                  ),
+                  style: labelStyle,
+                ),
             ],
           ),
         ),
@@ -186,9 +192,19 @@ class TemperatureChart extends StatelessWidget {
     );
   }
 
-  static String _formatTime(double ts) {
+  static String _formatTime(double ts, double spanSeconds) {
     final dt = DateTime.fromMillisecondsSinceEpoch((ts * 1000).toInt());
+    if (spanSeconds > 86400) {
+      // > 1 day: day name + day-of-month
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return '${days[dt.weekday - 1]} ${dt.day}';
+    }
     final h = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
-    return '$h:${dt.minute.toString().padLeft(2, '0')}${dt.hour < 12 ? 'a' : 'p'}';
+    final suffix = dt.hour < 12 ? 'a' : 'p';
+    if (spanSeconds > 43200) {
+      // > 12 hours: hour + am/pm only
+      return '$h$suffix';
+    }
+    return '$h:${dt.minute.toString().padLeft(2, '0')}$suffix';
   }
 }

@@ -64,6 +64,9 @@ class HistoryStore:
     def get_history(self, limit: int = 1000, since: float = 0) -> list[dict]:
         """Return readings ordered by timestamp ascending.
 
+        When the number of rows matching *since* exceeds *limit*, results are
+        evenly down-sampled so the returned list still spans the full range.
+
         Args:
             limit: Maximum number of rows to return.
             since: Only return readings with timestamp > since.
@@ -72,19 +75,54 @@ class HistoryStore:
             if self._conn is None:
                 return []
             try:
-                cursor = self._conn.execute(
-                    '''SELECT timestamp, temperature, temperature_f,
-                              raw_temperature, pressure, storm_level
-                       FROM readings
-                       WHERE timestamp > ?
-                       ORDER BY timestamp ASC
-                       LIMIT ?''',
-                    (since, limit),
-                )
-                return [dict(row) for row in cursor.fetchall()]
+                if since > 0:
+                    total = self._conn.execute(
+                        'SELECT COUNT(*) FROM readings WHERE timestamp > ?',
+                        (since,),
+                    ).fetchone()[0]
+
+                    if total <= limit:
+                        cursor = self._conn.execute(
+                            '''SELECT timestamp, temperature, temperature_f,
+                                      raw_temperature, pressure, storm_level
+                               FROM readings
+                               WHERE timestamp > ?
+                               ORDER BY timestamp ASC''',
+                            (since,),
+                        )
+                    else:
+                        step = max(1, total // limit)
+                        cursor = self._conn.execute(
+                            '''SELECT timestamp, temperature, temperature_f,
+                                      raw_temperature, pressure, storm_level
+                               FROM (
+                                   SELECT *, ROW_NUMBER() OVER (
+                                       ORDER BY timestamp ASC
+                                   ) AS rn
+                                   FROM readings
+                                   WHERE timestamp > ?
+                               )
+                               WHERE (rn - 1) % ? = 0
+                               ORDER BY timestamp ASC
+                               LIMIT ?''',
+                            (since, step, limit),
+                        )
+                else:
+                    cursor = self._conn.execute(
+                        '''SELECT timestamp, temperature, temperature_f,
+                                  raw_temperature, pressure, storm_level
+                           FROM readings
+                           WHERE timestamp > ?
+                           ORDER BY timestamp ASC
+                           LIMIT ?''',
+                        (since, limit),
+                    )
+                raw_rows = cursor.fetchall()
             except sqlite3.Error:
                 logger.exception('Failed to read history from SQLite')
                 return []
+        # Convert outside the lock so add_reading() isn't blocked
+        return [dict(row) for row in raw_rows]
 
     def get_latest(self, limit: int = 1000) -> list[dict]:
         """Return the *newest* readings, ordered by timestamp ascending.
@@ -104,12 +142,14 @@ class HistoryStore:
                        LIMIT ?''',
                     (limit,),
                 )
-                rows = [dict(row) for row in cursor.fetchall()]
-                rows.reverse()
-                return rows
+                raw_rows = cursor.fetchall()
             except sqlite3.Error:
                 logger.exception('Failed to read latest history from SQLite')
                 return []
+        # Convert outside the lock so add_reading() isn't blocked
+        rows = [dict(row) for row in raw_rows]
+        rows.reverse()
+        return rows
 
     def clear(self) -> None:
         """Delete all stored readings."""

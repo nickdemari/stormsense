@@ -95,17 +95,37 @@ class TestHistoryEndpoint(unittest.TestCase):
 
     def test_history_calls_sensor_get_history(self):
         self.client.get('/api/history')
-        self.mock_sensor.get_history.assert_called_once_with(since=0)
+        self.mock_sensor.get_history.assert_called_once_with(
+            since=0, limit=1000,
+        )
 
     def test_history_since_query_param(self):
         resp = self.client.get('/api/history?since=1708635500.0')
         self.assertEqual(resp.status_code, 200)
-        self.mock_sensor.get_history.assert_called_once_with(since=1708635500.0)
+        self.mock_sensor.get_history.assert_called_once_with(
+            since=1708635500.0, limit=1000,
+        )
 
     def test_history_since_invalid_falls_back_to_zero(self):
         resp = self.client.get('/api/history?since=notanumber')
         self.assertEqual(resp.status_code, 200)
-        self.mock_sensor.get_history.assert_called_once_with(since=0)
+        self.mock_sensor.get_history.assert_called_once_with(
+            since=0, limit=1000,
+        )
+
+    def test_history_custom_limit(self):
+        resp = self.client.get('/api/history?limit=500')
+        self.assertEqual(resp.status_code, 200)
+        self.mock_sensor.get_history.assert_called_once_with(
+            since=0, limit=500,
+        )
+
+    def test_history_limit_clamped_to_max(self):
+        resp = self.client.get('/api/history?limit=99999')
+        self.assertEqual(resp.status_code, 200)
+        self.mock_sensor.get_history.assert_called_once_with(
+            since=0, limit=5000,
+        )
 
 
 class TestHealthEndpoint(unittest.TestCase):

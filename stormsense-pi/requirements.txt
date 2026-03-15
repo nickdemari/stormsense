@@ -2,3 +2,4 @@ rainbowhat
 flask
 flask-cors
 flask-limiter
+flask-compress

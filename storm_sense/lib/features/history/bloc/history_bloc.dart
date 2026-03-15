@@ -5,7 +5,7 @@ import 'package:storm_sense/core/api/storm_sense_api.dart';
 import 'package:storm_sense/features/history/bloc/history_event.dart';
 import 'package:storm_sense/features/history/bloc/history_state.dart';
 
-/// Max readings held in memory — matches server-side limit.
+const _kDefaultRangeSeconds = 2 * 3600; // 2 hours
 const _kMaxReadings = 5000;
 
 class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
@@ -15,15 +15,21 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     on<HistoryPollIntervalChanged>(_onPollIntervalChanged);
     on<HistoryStopped>(_onStopped);
     on<HistoryPolled>(_onPolled);
+    on<HistoryRangeChanged>(_onRangeChanged);
   }
 
   StormSenseApi? _api;
   Timer? _pollTimer;
+  int _rangeSeconds = _kDefaultRangeSeconds;
 
-  /// Full fetch — replaces all readings.
+  double get _sinceCutoff =>
+      DateTime.now().millisecondsSinceEpoch / 1000.0 - _rangeSeconds;
+
+  /// Full fetch for the current time range.
   Future<void> _fetchHistory(Emitter<HistoryState> emit) async {
     try {
-      final readings = await _api!.getHistory();
+      final readings =
+          await _api!.getHistory(since: _sinceCutoff, limit: _kMaxReadings);
       emit(HistoryLoaded(readings: readings));
     } catch (e) {
       final previousReadings =
@@ -35,7 +41,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     }
   }
 
-  /// Incremental fetch — appends only new readings since the last timestamp.
+  /// Incremental fetch — appends new readings and trims to the time window.
   Future<void> _fetchIncremental(Emitter<HistoryState> emit) async {
     final current = state;
     if (current is! HistoryLoaded || current.readings.isEmpty) {
@@ -46,6 +52,9 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       final newReadings = await _api!.getHistory(since: lastTs);
       if (newReadings.isEmpty) return;
       var merged = [...current.readings, ...newReadings];
+      // Trim readings outside the current time window.
+      final cutoff = _sinceCutoff;
+      merged = merged.where((r) => r.timestamp >= cutoff).toList();
       if (merged.length > _kMaxReadings) {
         merged = merged.sublist(merged.length - _kMaxReadings);
       }
@@ -76,6 +85,15 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     HistoryRefreshed event,
     Emitter<HistoryState> emit,
   ) async {
+    if (_api == null) return;
+    await _fetchHistory(emit);
+  }
+
+  Future<void> _onRangeChanged(
+    HistoryRangeChanged event,
+    Emitter<HistoryState> emit,
+  ) async {
+    _rangeSeconds = event.rangeSeconds;
     if (_api == null) return;
     await _fetchHistory(emit);
   }

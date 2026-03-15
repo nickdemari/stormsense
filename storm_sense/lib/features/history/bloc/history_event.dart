@@ -35,3 +35,11 @@ final class HistoryStopped extends HistoryEvent {
 final class HistoryPolled extends HistoryEvent {
   const HistoryPolled();
 }
+
+final class HistoryRangeChanged extends HistoryEvent {
+  const HistoryRangeChanged(this.rangeSeconds);
+  final int rangeSeconds;
+
+  @override
+  List<Object?> get props => [rangeSeconds];
+}

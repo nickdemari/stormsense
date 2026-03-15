@@ -112,7 +112,7 @@ class SensorService:
             'pressure_delta_3h': self.pressure_delta_3h,
         }
 
-    def get_history(self, since: float = 0) -> list[dict]:
+    def get_history(self, since: float = 0, limit: int = 1000) -> list[dict]:
         """Return readings matching the /api/history contract.
 
         Queries SQLite when available (full multi-day history); falls back to
@@ -120,11 +120,12 @@ class SensorService:
         """
         if self._store.is_available:
             if since > 0:
-                return self._store.get_history(limit=5000, since=since)
-            return self._store.get_latest(limit=5000)
+                return self._store.get_history(limit=limit, since=since)
+            return self._store.get_latest(limit=limit)
         if since > 0:
-            return [r for r in self._session_log if r['timestamp'] > since]
-        return list(self._session_log)
+            rows = [r for r in self._session_log if r['timestamp'] > since]
+            return rows[-limit:]
+        return list(self._session_log)[-limit:]
 
     def reset_history(self) -> None:
         """Clear all history (in-memory and persisted) and reset storm state."""

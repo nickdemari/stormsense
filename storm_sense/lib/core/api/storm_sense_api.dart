@@ -18,10 +18,13 @@ class StormSenseApi {
     return StormStatus.fromJson(response.data!);
   }
 
-  Future<List<Reading>> getHistory({double since = 0}) async {
+  Future<List<Reading>> getHistory({double since = 0, int? limit}) async {
     final response = await _dio.get<List<dynamic>>(
       '/api/history',
-      queryParameters: {if (since > 0) 'since': since},
+      queryParameters: {
+        if (since > 0) 'since': since,
+        if (limit != null) 'limit': limit,
+      },
     );
     return response.data!
         .cast<Map<String, dynamic>>()

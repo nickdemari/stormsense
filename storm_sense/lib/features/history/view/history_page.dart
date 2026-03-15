@@ -39,14 +39,6 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   _TimeRange _selectedRange = _TimeRange.twoHours;
 
-  List<Reading> _filterReadings(List<Reading> readings) {
-    if (readings.isEmpty) return readings;
-    final latest = readings.last.timestamp;
-    final cutoff = latest - _selectedRange.duration.inSeconds;
-    final filtered = readings.where((r) => r.timestamp >= cutoff).toList();
-    return filtered.length >= 2 ? filtered : readings;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -84,7 +76,7 @@ class _HistoryPageState extends State<HistoryPage> {
             if (state is HistoryError &&
                 state.previousReadings != null &&
                 state.previousReadings!.isNotEmpty) {
-              final readings = _filterReadings(state.previousReadings!);
+              final readings = state.previousReadings!;
               return BlocBuilder<SettingsBloc, SettingsState>(
                 builder: (context, settings) {
                   return _buildContent(readings, theme, cs, settings);
@@ -122,7 +114,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 );
               }
 
-              final readings = _filterReadings(state.readings);
+              final readings = state.readings;
               return BlocBuilder<SettingsBloc, SettingsState>(
                 builder: (context, settings) {
                   return _buildContent(readings, theme, cs, settings);
@@ -182,7 +174,12 @@ class _HistoryPageState extends State<HistoryPage> {
           // Time range selector
           _TimeRangeSelector(
             selected: _selectedRange,
-            onChanged: (range) => setState(() => _selectedRange = range),
+            onChanged: (range) {
+              setState(() => _selectedRange = range);
+              context.read<HistoryBloc>().add(
+                    HistoryRangeChanged(range.duration.inSeconds),
+                  );
+            },
           ),
           const SizedBox(height: 16),
 
